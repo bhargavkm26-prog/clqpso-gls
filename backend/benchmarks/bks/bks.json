@@ -1,0 +1,20 @@
+{
+  "A-n32-k5": {
+    "bks": 784,
+    "vehicles": 5,
+    "capacity": 100,
+    "source": "Augerat et al. (1995), CVRPLIB"
+  },
+  "A-n53-k7": {
+    "bks": 1010,
+    "vehicles": 7,
+    "capacity": 100,
+    "source": "Augerat et al. (1995), CVRPLIB"
+  },
+  "A-n80-k10": {
+    "bks": 1763,
+    "vehicles": 10,
+    "capacity": 100,
+    "source": "Augerat et al. (1995), CVRPLIB"
+  }
+}

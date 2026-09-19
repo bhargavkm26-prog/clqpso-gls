@@ -17,19 +17,13 @@ export default function AlgorithmRace() {
         setData((prevData) => {
           const i = prevData.length;
           
-          // Simulated curves
-          // CLQPSO converges fast and low
           const clqpso = 1000 + 4000 * Math.exp(-i / 20) + (Math.random() * 50);
-          
-          // PSO converges slower and gets stuck in local optima
           const pso = 1300 + 3700 * Math.exp(-i / 40) + (Math.random() * 80);
-          
-          // GA converges even slower
           const ga = 1500 + 3500 * Math.exp(-i / 80) + (Math.random() * 100);
 
           return [...prevData, { iteration: i, clqpso, pso, ga }];
         });
-      }, 50); // 50ms per iteration
+      }, 50);
     } else if (iteration >= MAX_ITERATIONS) {
       setIsPlaying(false);
     }
@@ -109,7 +103,6 @@ export default function AlgorithmRace() {
         )}
       </div>
       
-      {/* Mini leaderboard */}
       {data.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">

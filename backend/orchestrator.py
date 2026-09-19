@@ -104,6 +104,26 @@ class OptimizerOrchestrator:
         self.cost_matrix_manager = CostMatrix(self.graph, self.depot, self.customers)
         logger.info(f"Problem setup complete: {num_customers} customers.")
 
+    def setup_custom_instance(
+        self,
+        cost_matrix: np.ndarray,
+        demands: np.ndarray,
+        vehicle_capacity: float
+    ) -> None:
+        """Set up orchestrator using an explicit cost matrix, demands, and capacity (for standard benchmarks)."""
+        class DummyCostMatrixManager:
+            def __init__(self, mat):
+                self.matrix = mat
+                non_zero = mat[mat > 0]
+                self.min_cost = float(np.min(non_zero)) if len(non_zero) > 0 else 1.0
+                self.max_cost = float(np.max(mat))
+
+        self.cost_matrix_manager = DummyCostMatrixManager(cost_matrix)
+        self.demands = demands
+        self.vehicle_capacity = vehicle_capacity
+        self.customers = list(range(len(demands)))
+        self.num_customers = len(demands)
+
     def _init_optimizer_components(self) -> None:
         """Initialize QPSO, GLS, and Levy flight components."""
         opt_config = self.config.get("optimizer", {})

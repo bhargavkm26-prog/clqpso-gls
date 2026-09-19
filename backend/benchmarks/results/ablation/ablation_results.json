@@ -1,0 +1,156 @@
+[
+  {
+    "variant_code": "A",
+    "variant_name": "Base QPSO",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.2034955079670764,
+    "std": 0.06420785127679929,
+    "best": 1.1002042246418344,
+    "worst": 1.292489244555135,
+    "median": 1.2062340275370147,
+    "mean_runtime_seconds": 7.02757217999897,
+    "gap_to_bks_percent": -99.85966782848956,
+    "improvement_percent": 0.0,
+    "valid_runs": 0,
+    "total_runs": 5
+  },
+  {
+    "variant_code": "B",
+    "variant_name": "+ Chaotic Init",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.1689377546210646,
+    "std": 0.04658464652533778,
+    "best": 1.1002135767966748,
+    "worst": 1.2352629073783061,
+    "median": 1.1766867311462874,
+    "mean_runtime_seconds": 6.936664819999715,
+    "gap_to_bks_percent": -99.85966663561267,
+    "improvement_percent": 2.8714484696653413,
+    "valid_runs": 0,
+    "total_runs": 5
+  },
+  {
+    "variant_code": "C",
+    "variant_name": "+ Adaptive Alpha",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.1689377546210646,
+    "std": 0.04658464652533778,
+    "best": 1.1002135767966748,
+    "worst": 1.2352629073783061,
+    "median": 1.1766867311462874,
+    "mean_runtime_seconds": 5.307848759999615,
+    "gap_to_bks_percent": -99.85966663561267,
+    "improvement_percent": 0.0,
+    "valid_runs": 0,
+    "total_runs": 5
+  },
+  {
+    "variant_code": "D",
+    "variant_name": "+ Levy Flight",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.1689377546210646,
+    "std": 0.04658464652533778,
+    "best": 1.1002135767966748,
+    "worst": 1.2352629073783061,
+    "median": 1.1766867311462874,
+    "mean_runtime_seconds": 5.078123199997935,
+    "gap_to_bks_percent": -99.85966663561267,
+    "improvement_percent": 0.0,
+    "valid_runs": 0,
+    "total_runs": 5
+  },
+  {
+    "variant_code": "E",
+    "variant_name": "+ GLS (2-opt/Or-opt)",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.1689377546210646,
+    "std": 0.04658464652533778,
+    "best": 1.1002135767966748,
+    "worst": 1.2352629073783061,
+    "median": 1.1766867311462874,
+    "mean_runtime_seconds": 4.999656299999333,
+    "gap_to_bks_percent": -99.85966663561267,
+    "improvement_percent": 0.0,
+    "valid_runs": 0,
+    "total_runs": 5
+  },
+  {
+    "variant_code": "F",
+    "variant_name": "+ SWAP*",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.1689377546210646,
+    "std": 0.04658464652533778,
+    "best": 1.1002135767966748,
+    "worst": 1.2352629073783061,
+    "median": 1.1766867311462874,
+    "mean_runtime_seconds": 5.6836979199957565,
+    "gap_to_bks_percent": -99.85966663561267,
+    "improvement_percent": 0.0,
+    "valid_runs": 0,
+    "total_runs": 5
+  },
+  {
+    "variant_code": "G",
+    "variant_name": "Full CLQPSO-GLS",
+    "instance": "A-n32-k5",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      999
+    ],
+    "mean": 1.1689377546210646,
+    "std": 0.04658464652533778,
+    "best": 1.1002135767966748,
+    "worst": 1.2352629073783061,
+    "median": 1.1766867311462874,
+    "mean_runtime_seconds": 6.704113920000964,
+    "gap_to_bks_percent": -99.85966663561267,
+    "improvement_percent": 0.0,
+    "valid_runs": 0,
+    "total_runs": 5
+  }
+]

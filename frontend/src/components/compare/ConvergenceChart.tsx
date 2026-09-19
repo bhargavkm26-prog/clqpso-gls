@@ -13,7 +13,6 @@ export default function ConvergenceChart({ data }: ChartProps) {
     );
   }
 
-  // Calculate dynamic Y-axis bounds for better visualization
   const minCost = Math.min(...data.map(d => d.cost));
   const maxCost = Math.max(...data.map(d => d.cost));
   const padding = (maxCost - minCost) * 0.1 || maxCost * 0.1;
@@ -47,7 +46,7 @@ export default function ConvergenceChart({ data }: ChartProps) {
           strokeWidth={2}
           dot={false}
           activeDot={{ r: 6, fill: '#4f46e5', stroke: '#fff', strokeWidth: 2 }}
-          isAnimationActive={false} // Disable animation for real-time updates
+          isAnimationActive={false}
         />
       </LineChart>
     </ResponsiveContainer>

@@ -1,0 +1,68 @@
+{
+  "algorithm": "OR-Tools",
+  "instance": "A-n32-k5",
+  "seed": 0,
+  "best_fitness": 903.32,
+  "distance": 903.32,
+  "travel_time": 903.32,
+  "congestion_cost": 0.0,
+  "vehicle_count": 5,
+  "runtime_seconds": 5.013839199993527,
+  "iterations": 0,
+  "convergence": [
+    {
+      "iteration": 1,
+      "best_fitness": 903.32
+    }
+  ],
+  "routes": [
+    [
+      8,
+      14,
+      26,
+      9,
+      23,
+      4,
+      19
+    ],
+    [
+      25,
+      17,
+      7,
+      10,
+      3,
+      27,
+      29,
+      30
+    ],
+    [
+      13,
+      12,
+      16,
+      18,
+      20,
+      6
+    ],
+    [
+      5,
+      2,
+      1,
+      28,
+      22,
+      21
+    ],
+    [
+      24,
+      11,
+      0,
+      15
+    ]
+  ],
+  "parameters": {
+    "time_limit_seconds": 5,
+    "metaheuristic": "GUIDED_LOCAL_SEARCH"
+  },
+  "status": "OPTIMAL",
+  "valid": true,
+  "errors": []
+}

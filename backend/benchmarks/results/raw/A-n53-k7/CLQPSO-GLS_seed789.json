@@ -1,0 +1,99 @@
+{
+  "algorithm": "CLQPSO-GLS",
+  "instance": "A-n53-k7",
+  "seed": 789,
+  "best_fitness": 0.9585548524159283,
+  "distance": 0.9585548524159283,
+  "travel_time": 0.9585548524159283,
+  "congestion_cost": 0.0,
+  "vehicle_count": 9,
+  "runtime_seconds": 13.657279400009429,
+  "iterations": 150,
+  "convergence": [
+    {
+      "iteration": 1,
+      "best_fitness": 0.9585548524159283
+    }
+  ],
+  "routes": [
+    [
+      42,
+      6,
+      46,
+      0,
+      11,
+      15,
+      49,
+      38
+    ],
+    [
+      31,
+      24,
+      40,
+      51,
+      19,
+      47
+    ],
+    [
+      36,
+      13,
+      21
+    ],
+    [
+      22,
+      43,
+      50,
+      29,
+      30,
+      7,
+      17
+    ],
+    [
+      25,
+      34,
+      37,
+      41
+    ],
+    [
+      23,
+      4,
+      48,
+      32,
+      9,
+      44
+    ],
+    [
+      26,
+      14,
+      8,
+      10,
+      3,
+      27
+    ],
+    [
+      28,
+      1,
+      2,
+      39,
+      45,
+      5
+    ],
+    [
+      33,
+      12,
+      35,
+      20,
+      18,
+      16
+    ]
+  ],
+  "parameters": {
+    "population_size": 128,
+    "max_iterations": 150
+  },
+  "status": "COMPLETED",
+  "valid": false,
+  "errors": [
+    "Cost mismatch: recalculated=1131.91, reported=0.96 (diff=1130.95)"
+  ]
+}
