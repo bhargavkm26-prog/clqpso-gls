@@ -290,6 +290,10 @@ class QPSOEngine:
             each particle's fitness rank:
             - Good particles get smaller alpha (exploit their region)
             - Poor particles get larger alpha (explore more)
+            
+        Note: The adjustment constants (0.3 and 0.15) are engineering choices 
+        specific to this implementation. They do not originate from the original 
+        QPSO paper.
         """
         diversity = continuous_diversity(self.population)
 
@@ -352,11 +356,13 @@ class QPSOEngine:
         self.pbest_positions[improved] = self.population[improved].copy()
         self.pbest_fitness[improved] = self.fitness[improved]
 
-        # Global best
-        best_idx = np.argmin(self.pbest_fitness)
-        if self.pbest_fitness[best_idx] < self.gbest_fitness:
-            self.gbest_fitness = float(self.pbest_fitness[best_idx])
-            self.gbest_position = self.pbest_positions[best_idx].copy()
+        # Global best: update if any of the CURRENT evaluated particles beat gbest.
+        # This ensures gbest_position, gbest_fitness, and gbest_split correspond
+        # exactly to the same solution.
+        best_idx = np.argmin(self.fitness)
+        if self.fitness[best_idx] < self.gbest_fitness:
+            self.gbest_fitness = float(self.fitness[best_idx])
+            self.gbest_position = self.population[best_idx].copy()
             self.gbest_split = self.split_results[best_idx]
 
     def _record_state(self, levy_triggered: bool = False) -> QPSOState:
@@ -407,6 +413,9 @@ class QPSOEngine:
 
         elapsed = (time.time() - self._start_time) * 1000.0
         if elapsed >= self.time_budget_ms:
+            return True
+
+        if self.stagnation_counter >= self.convergence_patience:
             return True
 
         return False

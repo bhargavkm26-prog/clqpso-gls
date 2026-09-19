@@ -29,7 +29,7 @@ def test_phase3():
     print("=" * 60)
 
     # 1. Setup problem instance
-    print("\n[1/4] Setting up problem instance...")
+    print("\n[1/6] Setting up problem instance...")
     config = load_config()
     
     # Use smaller instance for quick convergence testing
@@ -61,7 +61,7 @@ def test_phase3():
     print(f"  ✓ {num_customers} customers, {opt_config['population_size']} particles")
 
     # 2. Engine Initialization
-    print("\n[2/4] Testing QPSO Engine Initialization...")
+    print("\n[2/6] Testing QPSO Engine Initialization...")
     
     engine = QPSOEngine(
         cost_matrix=cm.matrix,
@@ -84,7 +84,7 @@ def test_phase3():
     print(f"  ✓ Initial Best Fitness: {engine.gbest_fitness:.6f}")
 
     # 3. Single Step Execution
-    print("\n[3/4] Testing QPSO Single Step...")
+    print("\n[3/6] Testing QPSO Single Step...")
     
     initial_fitness = engine.gbest_fitness
     state = engine.step()
@@ -99,7 +99,7 @@ def test_phase3():
     print(f"  ✓ Diversity={state.diversity:.3f}")
 
     # 4. Convergence Loop
-    print("\n[4/4] Testing QPSO Convergence Loop...")
+    print("\n[4/6] Testing QPSO Convergence Loop...")
     
     start_fitness = engine.gbest_fitness
     
@@ -116,12 +116,57 @@ def test_phase3():
 
     result = engine.get_result()
     
-    assert result.total_iterations == opt_config["max_iterations"]
-    assert result.best_fitness <= start_fitness
-    assert len(result.best_routes) == result.best_num_vehicles
+    assert result.total_iterations <= opt_config["max_iterations"], "Iterations should not exceed max"
+    assert result.best_fitness <= start_fitness, "Fitness should not degrade"
+    assert len(result.best_routes) == result.best_num_vehicles, "Route count mismatch"
     
     print(f"\n  ✓ Optimization finished in {result.elapsed_ms:.1f} ms")
     print(f"  ✓ Improvement: {start_fitness:.6f} -> {result.best_fitness:.6f}")
+
+    # 5. Gbest Consistency Check
+    print("\n[5/6] Testing Gbest Consistency...")
+    from backend.optimizer.decoder import random_keys_to_giant_tour
+    from backend.optimizer.split import split
+
+    decoded_tour = random_keys_to_giant_tour(engine.gbest_position)
+    recalc_split = split(
+        decoded_tour, cm.matrix, demands, vehicle_capacity, max_vehicles=opt_config.get("max_vehicles")
+    )
+    recalc_fitness = evaluator.evaluate(recalc_split)
+
+    # Ensure the fitness matches
+    assert np.isclose(recalc_fitness, engine.gbest_fitness), f"Consistency error: {recalc_fitness} != {engine.gbest_fitness}"
+    
+    # Ensure the total cost matches
+    assert np.isclose(recalc_split.total_cost, engine.gbest_split.total_cost), "Consistency error: split total cost mismatch"
+    
+    print(f"  ✓ Gbest position explicitly decodes to the exact same fitness and split cost")
+
+    # 6. Stagnation Stopping Check
+    print("\n[6/6] Testing Stagnation Stopping...")
+    # Create a new engine with a very small patience
+    opt_config["stopping"] = {"convergence_patience": 5}
+    opt_config["max_iterations"] = 100
+    engine_stag = QPSOEngine(
+        cost_matrix=cm.matrix,
+        demands=demands,
+        vehicle_capacity=vehicle_capacity,
+        config=opt_config,
+        fitness_evaluator=evaluator,
+        seed=123,
+    )
+    engine_stag.initialize()
+    
+    # Force it to stagnate
+    iters = 0
+    while not engine_stag.should_stop():
+        engine_stag.step()
+        iters += 1
+        
+    assert engine_stag.stagnation_counter >= 5, "Engine should have stopped due to stagnation"
+    assert iters < 100, "Engine failed to stop early for stagnation"
+    
+    print(f"  ✓ Engine correctly stopped early at iteration {iters} due to stagnation")
     
     # Final summary
     print("\n" + "=" * 60)
