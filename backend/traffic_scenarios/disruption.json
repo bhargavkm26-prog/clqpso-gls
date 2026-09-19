@@ -1,6 +1,6 @@
 {
   "name": "major_disruption",
-  "description": "Road closure near city center with cascading congestion.",
+  "description": "Severe congestion near city center with cascading delays.",
   "edge_updates": [],
   "region_updates": [
     {

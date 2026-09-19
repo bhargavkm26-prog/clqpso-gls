@@ -50,6 +50,22 @@ def _build_osmnx_graph(config: dict[str, Any]) -> nx.DiGraph:
 
     Requires: pip install osmnx
 
+    OSMnx returns a ``MultiDiGraph`` (parallel edges for different road
+    segments between the same intersection pair).  We flatten it to a
+    plain ``DiGraph`` so that ``G[u][v]`` returns a single edge-data dict
+    — the same access pattern used by traffic.py, shortest_path.py, and
+    cost_matrix.py.
+
+    **Parallel-edge rule**: when multiple edges exist for the same (u, v)
+    pair, we keep the one with the lowest free-flow ``travel_time``
+    (computed from ``length`` and the parsed ``maxspeed``).  All standard
+    edge attributes are preserved: distance, speed_limit, travel_time,
+    congestion_factor, and status.
+
+    **Speed-unit handling**: OSMnx ``maxspeed`` tags may contain "mph"
+    suffixes.  These are detected and converted to km/h.  A documented
+    fallback of 40 km/h is used when speed data is missing or unparseable.
+
     Args:
         config: Must contain 'city' and 'network_type'.
 
@@ -66,38 +82,61 @@ def _build_osmnx_graph(config: dict[str, Any]) -> nx.DiGraph:
     network_type = config.get("network_type", "drive")
 
     print(f"Downloading road network for: {city}")
-    G = ox.graph_from_place(city, network_type=network_type)
+    G_multi = ox.graph_from_place(city, network_type=network_type)
 
-    # Convert to DiGraph if not already
-    if not G.is_directed():
-        G = G.to_directed()
-
-    # Normalize edge attributes
-    for u, v, data in G.edges(data=True):
+    # ------------------------------------------------------------------
+    # Step 1: Normalize attributes on every edge of the MultiDiGraph
+    # ------------------------------------------------------------------
+    for u, v, key, data in G_multi.edges(data=True, keys=True):
         # Distance in meters
         if "length" in data:
             data["distance"] = float(data["length"])
         else:
-            data["distance"] = 100.0  # default 100m
+            data["distance"] = 100.0  # default 100 m
 
-        # Speed limit in km/h (OSMnx may have 'maxspeed')
+        # Speed limit in km/h
         maxspeed = data.get("maxspeed", None)
         if isinstance(maxspeed, list):
             maxspeed = maxspeed[0]
         if maxspeed is not None:
             try:
-                data["speed_limit"] = float(str(maxspeed).replace(" km/h", "").replace(" mph", ""))
+                raw = str(maxspeed)
+                if "mph" in raw.lower():
+                    # Convert miles-per-hour → km/h
+                    numeric = float(raw.lower().replace("mph", "").strip())
+                    data["speed_limit"] = numeric * 1.609344
+                else:
+                    # Assume km/h (strip optional unit suffix)
+                    numeric = float(raw.lower().replace("km/h", "").strip())
+                    data["speed_limit"] = numeric
             except (ValueError, TypeError):
-                data["speed_limit"] = 40.0
+                data["speed_limit"] = 40.0  # fallback: unparseable
         else:
-            data["speed_limit"] = 40.0
+            data["speed_limit"] = 40.0  # fallback: missing speed data
 
-        # Travel time in seconds (distance_m / speed_m_per_s)
+        # Free-flow travel time in seconds  (distance_m / speed_m_per_s)
         speed_ms = data["speed_limit"] * 1000.0 / 3600.0  # km/h → m/s
         data["travel_time"] = data["distance"] / max(speed_ms, 0.1)
 
-        # Congestion factor (1.0 = free flow, initialized as free flow)
+        # Congestion factor (1.0 = free flow)
         data["congestion_factor"] = 1.0
+
+        # Edge status
+        data.setdefault("status", "active")
+
+    # ------------------------------------------------------------------
+    # Step 2: Flatten MultiDiGraph → DiGraph
+    # For each (u, v) pair keep the edge with the lowest travel_time.
+    # ------------------------------------------------------------------
+    G = nx.DiGraph()
+    G.graph.update(G_multi.graph)
+    G.add_nodes_from(G_multi.nodes(data=True))
+
+    for u, v, _key, data in G_multi.edges(data=True, keys=True):
+        if G.has_edge(u, v):
+            if data["travel_time"] >= G[u][v]["travel_time"]:
+                continue  # keep existing faster edge
+        G.add_edge(u, v, **data)
 
     print(f"Graph loaded: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
     return G

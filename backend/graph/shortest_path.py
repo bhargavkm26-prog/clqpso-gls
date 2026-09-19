@@ -113,39 +113,35 @@ def selective_update(
     affected_edges: set[tuple[int, int]],
     weight: str = "travel_time",
 ) -> dict[int, dict[int, float]]:
-    """Selectively recompute costs only for pairs affected by edge changes.
+    """Recompute the stop-to-stop cost matrix after edge-weight changes.
 
-    §24: When traffic updates arrive, identify affected edges and only
-    recompute the stop-to-stop costs that might have changed.
+    §24 envisions identifying which stop-to-stop pairs are affected by
+    the changed edges and recomputing only those.  Implementing that
+    correctly requires tracking which edges lie on each cached shortest
+    path — a non-trivial bookkeeping overhead.
 
-    For a targeted update, we find which source nodes have paths
-    that *could* pass through any affected edge, then recompute
-    from those sources.
-
-    For simplicity in this implementation, we recompute from any
-    source that is within a reasonable hop distance of an affected edge.
-    A full implementation would track path membership.
+    **Current behaviour (conservative fallback):** this function performs
+    a full ``all_pairs_dijkstra`` recomputation regardless of which edges
+    changed.  This is always correct, and on graphs with ≤ 1 000 stops
+    the runtime is negligible.  The ``affected_edges`` parameter is
+    accepted (and short-circuit-checked for emptiness) so that callers
+    do not need to change when a future incremental implementation is
+    added.
 
     Args:
         graph: Road network DiGraph.
-        existing_costs: Current cost dictionary.
+        existing_costs: Current cost dictionary (unused in this
+            conservative implementation — kept for API compatibility).
         nodes: List of optimization stop nodes.
         affected_edges: Set of (u, v) edges that changed.
+            If empty, the existing costs are returned unchanged.
         weight: Edge attribute to use as cost.
 
     Returns:
-        Updated cost dictionary.
+        Updated cost dictionary (full recomputation).
     """
     if not affected_edges:
         return existing_costs
 
-    # Find nodes near affected edges
-    affected_nodes = set()
-    for u, v in affected_edges:
-        affected_nodes.add(u)
-        affected_nodes.add(v)
-
-    # Recompute from all sources (conservative but correct)
-    # A production system would do incremental updates
-    updated = all_pairs_dijkstra(graph, nodes, weight=weight)
-    return updated
+    # Conservative full recomputation — always correct.
+    return all_pairs_dijkstra(graph, nodes, weight=weight)

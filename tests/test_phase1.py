@@ -12,6 +12,8 @@ Tests:
 import sys
 import os
 
+import numpy as np
+
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -79,6 +81,13 @@ def test_phase1():
     print(f"  ✓ Cost range: [{cm.min_cost:.2f}, {cm.max_cost:.2f}]")
     assert reach_pct > 50, f"Too few reachable pairs ({reach_pct:.1f}%)"
 
+    # The synthetic 20×20 bidirectional grid is fully connected, so every
+    # stop-to-stop pair must be reachable.
+    assert reach_pct == 100.0, (
+        f"Synthetic grid should be fully connected but only "
+        f"{reach_pct:.1f}% of pairs are reachable"
+    )
+
     # 5. Traffic scenarios
     print("\n[5/6] Testing traffic scenarios...")
     traffic_mgr = TrafficManager(G)
@@ -101,12 +110,29 @@ def test_phase1():
 
     # 6. Cost matrix update after traffic change
     print("\n[6/6] Testing cost matrix update after traffic change...")
-    cost_before = cm.cost(0, 1)
-    cm.update(G, affected_edges=affected)
-    cost_after = cm.cost(0, 1)
 
-    print(f"  ✓ Cost (0→1) before: {cost_before:.2f}")
-    print(f"  ✓ Cost (0→1) after:  {cost_after:.2f}")
+    # Snapshot the entire cost matrix before the update
+    matrix_before = cm.matrix.copy()
+
+    cm.update(G, affected_edges=affected)
+
+    # Print a sample pair for visibility (may or may not have changed)
+    cost_before_01 = float(matrix_before[0, 1])
+    cost_after_01 = cm.cost(0, 1)
+    print(f"  ✓ Cost (0→1) before: {cost_before_01:.2f}")
+    print(f"  ✓ Cost (0→1) after:  {cost_after_01:.2f}")
+
+    # At least one finite stop-to-stop cost must have changed after
+    # applying moderate congestion to ~20 % of edges.  We do NOT assume
+    # which specific pair changed — only that the matrix is not identical.
+    finite_mask = np.isfinite(matrix_before) & (matrix_before > 0)
+    changed = np.any(cm.matrix[finite_mask] != matrix_before[finite_mask])
+    assert changed, (
+        "No stop-to-stop cost changed after applying moderate traffic — "
+        "the cost matrix update is not propagating congestion correctly"
+    )
+    n_changed = int(np.sum(cm.matrix[finite_mask] != matrix_before[finite_mask]))
+    print(f"  ✓ {n_changed} finite stop-to-stop costs changed after traffic update")
 
     # Verify normalized matrix
     norm = cm.get_normalized_matrix()
@@ -128,3 +154,4 @@ def test_phase1():
 
 if __name__ == "__main__":
     test_phase1()
+

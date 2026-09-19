@@ -41,6 +41,9 @@ class TrafficManager:
         for u, v, data in graph.edges(data=True):
             self._baseline_travel_times[(u, v)] = data.get("travel_time", 1.0)
 
+        # Cache per-attribute min/max for normalization (§4.1)
+        self._update_edge_stats()
+
     def load_scenario(self, scenario_path: str | Path) -> dict[str, Any]:
         """Load a traffic scenario from a JSON file.
 
@@ -136,6 +139,9 @@ class TrafficManager:
             f"{len(self.affected_edges)} edges affected"
         )
 
+        # Refresh normalization bounds for get_edge_cost()
+        self._update_edge_stats()
+
         return self.affected_edges
 
     def _apply_congestion(self, u: int, v: int, congestion_factor: float) -> None:
@@ -158,16 +164,49 @@ class TrafficManager:
                 data["congestion_factor"] = 1.0
                 data["travel_time"] = baseline_tt
 
+    def _update_edge_stats(self) -> None:
+        """Cache per-attribute min/max across all edges for normalization.
+
+        Called once at construction and after every ``apply_scenario`` so
+        that ``get_edge_cost`` can perform min-max normalization as
+        specified by §4.1.
+        """
+        tt_vals = []
+        dist_vals = []
+        cong_vals = []
+        for _u, _v, data in self.graph.edges(data=True):
+            tt_vals.append(data.get("travel_time", 1.0))
+            dist_vals.append(data.get("distance", 1.0))
+            cong_vals.append(data.get("congestion_factor", 1.0))
+
+        def _minmax(vals: list[float]) -> tuple[float, float]:
+            lo, hi = min(vals), max(vals)
+            return (lo, hi) if hi > lo else (lo, lo + 1.0)
+
+        self._tt_min, self._tt_max = _minmax(tt_vals)
+        self._dist_min, self._dist_max = _minmax(dist_vals)
+        self._cong_min, self._cong_max = _minmax(cong_vals)
+
     def get_edge_cost(
         self,
         u: int,
         v: int,
         weights: dict[str, float] | None = None,
     ) -> float:
-        """Compute the weighted cost for a single edge.
+        """Compute the normalized weighted composite cost for a single edge.
 
-        §4.1 Dynamic edge cost:
+        §4.1 Dynamic edge cost (blueprint):
             C_ij = w_time * T_norm + w_distance * D_norm + w_congestion * Q_norm
+
+        Each component is **min-max normalized** to [0, 1] using the
+        current graph-wide attribute ranges (updated after every scenario).
+
+        .. note::
+
+            This composite is intended for multi-objective fitness
+            evaluation.  Dijkstra shortest-paths operate on the raw
+            ``travel_time`` attribute (seconds, already scaled by
+            ``congestion_factor``) — see ``shortest_path.py``.
 
         Args:
             u: Source node.
@@ -176,7 +215,7 @@ class TrafficManager:
                 'travel_time', 'distance', 'congestion'.
 
         Returns:
-            Weighted edge cost.
+            Weighted normalized edge cost (dimensionless).
         """
         if not self.graph.has_edge(u, v):
             return float("inf")
@@ -189,14 +228,15 @@ class TrafficManager:
             }
 
         data = self.graph[u][v]
-        travel_time = data.get("travel_time", 1.0)
-        distance = data.get("distance", 1.0)
-        congestion = data.get("congestion_factor", 1.0)
+
+        t_norm = (data.get("travel_time", 1.0) - self._tt_min) / (self._tt_max - self._tt_min)
+        d_norm = (data.get("distance", 1.0) - self._dist_min) / (self._dist_max - self._dist_min)
+        q_norm = (data.get("congestion_factor", 1.0) - self._cong_min) / (self._cong_max - self._cong_min)
 
         cost = (
-            weights.get("travel_time", 0.4) * travel_time
-            + weights.get("distance", 0.3) * distance
-            + weights.get("congestion", 0.2) * congestion
+            weights.get("travel_time", 0.4) * t_norm
+            + weights.get("distance", 0.3) * d_norm
+            + weights.get("congestion", 0.2) * q_norm
         )
         return cost
 
@@ -275,7 +315,7 @@ def generate_default_scenarios(
     _write_scenario(path, moderate)
     scenarios.append(path)
 
-    # 3. Major disruption — road closure + regional congestion
+    # 3. Major disruption — severe congestion cascading from a center
     if len(nodes) > 10:
         closure_center = rng.choice(nodes[len(nodes) // 4 : 3 * len(nodes) // 4])
     else:
@@ -283,7 +323,7 @@ def generate_default_scenarios(
 
     disruption = {
         "name": "major_disruption",
-        "description": "Road closure near city center with cascading congestion.",
+        "description": "Severe congestion near city center with cascading delays.",
         "edge_updates": [],
         "region_updates": [
             {
