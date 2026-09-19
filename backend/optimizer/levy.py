@@ -12,7 +12,6 @@ import math
 from typing import Any
 
 import numpy as np
-import scipy.special
 
 
 class LevyFlight:
@@ -57,12 +56,16 @@ class LevyFlight:
         
         return self.jump_scale * step
 
-    def apply_jump(self, population: np.ndarray, num_particles_to_jump: int) -> np.ndarray:
+    def apply_jump(self, population: np.ndarray, num_particles_to_jump: int, fitness: np.ndarray | None = None) -> np.ndarray:
         """Apply Lévy flight to the worst performing particles.
 
         Args:
             population: The current population array (N, D).
             num_particles_to_jump: How many particles to perturb.
+            fitness: Optional fitness array (N,). If provided, selects the 
+                     worst `num_particles_to_jump` particles (highest fitness values).
+                     If None, assumes the caller has already ordered the population 
+                     and perturbs the last N rows for backward compatibility.
 
         Returns:
             The perturbed population array. Modifies in-place but also returns.
@@ -73,11 +76,15 @@ class LevyFlight:
         N, D = population.shape
         num_particles_to_jump = min(num_particles_to_jump, N)
         
-        # We perturb the last `num_particles_to_jump` particles
-        # (Assuming the caller has sorted them by fitness, or just wants a random subset.
-        # Typically applied to the worst part of the swarm).
-        indices = np.arange(N - num_particles_to_jump, N)
-        
+        if fitness is not None:
+            # Sort ascending by fitness, so worst particles (highest fitness) are at the end
+            indices = np.argsort(fitness)[-num_particles_to_jump:]
+        else:
+            # We perturb the last `num_particles_to_jump` particles
+            # (Assuming the caller has sorted them by fitness, or just wants a random subset.
+            # Typically applied to the worst part of the swarm).
+            indices = np.arange(N - num_particles_to_jump, N)
+            
         steps = self.generate_steps((num_particles_to_jump, D))
         
         # Apply steps

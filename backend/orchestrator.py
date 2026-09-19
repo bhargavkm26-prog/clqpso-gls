@@ -173,7 +173,8 @@ class OptimizerOrchestrator:
                 num_jump = int(self.qpso.N * self.levy_jump_fraction)
                 self.qpso.population = self.levy.apply_jump(
                     self.qpso.population,
-                    num_particles_to_jump=num_jump
+                    num_particles_to_jump=num_jump,
+                    fitness=self.qpso.fitness
                 )
                 
                 # Re-evaluate population after jump

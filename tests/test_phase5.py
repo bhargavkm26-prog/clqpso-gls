@@ -23,7 +23,7 @@ def test_phase5():
     print("=" * 60)
 
     # 1. Test Chaotic Initialization
-    print("\n[1/2] Testing Logistic-Tent Chaotic Map...")
+    print("\n[1/3] Testing Logistic-Tent Chaotic Map...")
     shape = (50, 20)
     chaotic_seq = logistic_tent_map(shape)
     
@@ -41,7 +41,7 @@ def test_phase5():
     print(f"  ✓ Mean value: {mean_val:.4f} (expected ~0.5)")
 
     # 2. Test Lévy Flight
-    print("\n[2/2] Testing Lévy Flight (Mantegna)...")
+    print("\n[2/3] Testing Lévy Flight (Mantegna)...")
     levy = LevyFlight(config={"levy": {"beta": 1.5, "jump_scale": 0.1}}, seed=42)
     
     # Test step generation
@@ -55,23 +55,42 @@ def test_phase5():
     print(f"  ✓ Sigma_u: {levy.sigma_u:.4f}")
     print(f"  ✓ Mean step magnitude: {mean_step:.4f}")
     print(f"  ✓ Max step magnitude: {max_step:.4f}")
-    assert max_step > 5 * mean_step, "Lévy steps missing heavy tail"
+    assert max_step > 5 * mean_step, "Expected a large maximum step characteristic of Mantegna"
     
-    # Test apply_jump
-    population = np.zeros(shape) + 0.5  # All 0.5
+    # Test apply_jump (Fallback behavior: fitness=None)
+    population_fallback = np.zeros(shape) + 0.5  # All 0.5
     num_jump = 10
     
-    levy.apply_jump(population, num_particles_to_jump=num_jump)
+    levy.apply_jump(population_fallback, num_particles_to_jump=num_jump)
     
     # First 40 should be untouched (0.5)
-    assert np.allclose(population[:40, :], 0.5)
-    
+    assert np.allclose(population_fallback[:40, :], 0.5)
     # Last 10 should be changed and bounded in [0, 1]
-    assert not np.allclose(population[40:, :], 0.5)
-    assert np.all((population[40:, :] >= 0.0) & (population[40:, :] <= 1.0))
+    assert not np.allclose(population_fallback[40:, :], 0.5)
+    assert np.all((population_fallback[40:, :] >= 0.0) & (population_fallback[40:, :] <= 1.0))
     
-    print(f"  ✓ Jump applied selectively to worst {num_jump} particles")
+    print(f"  ✓ Fallback: Jump applied to last {num_jump} particles")
     print(f"  ✓ Jumped particles bounded within [0, 1]")
+
+    # 3. Test Lévy Flight Fitness Selection
+    print("\n[3/3] Testing Lévy Flight Fitness Selection...")
+    population_fitness = np.zeros(shape) + 0.5  # All 0.5
+    fitness = np.arange(shape[0], dtype=np.float64)  # 0 to 49
+    
+    # Shuffle fitness so the worst aren't just at the end
+    rng = np.random.RandomState(123)
+    rng.shuffle(fitness)
+    
+    worst_indices = np.argsort(fitness)[-num_jump:]
+    best_indices = np.argsort(fitness)[:-num_jump]
+    
+    levy.apply_jump(population_fitness, num_particles_to_jump=num_jump, fitness=fitness)
+    
+    assert np.allclose(population_fitness[best_indices], 0.5), "Better particles should remain unchanged"
+    assert not np.allclose(population_fitness[worst_indices], 0.5), "Worst particles should be changed"
+    assert np.all((population_fitness[worst_indices] >= 0.0) & (population_fitness[worst_indices] <= 1.0))
+    print("  ✓ Jump applied selectively to the worst-ranked particles based on fitness")
+    print("  ✓ Better particles remained untouched")
 
     print("\n" + "=" * 60)
     print("✅ ALL PHASE 5 TESTS PASSED!")
