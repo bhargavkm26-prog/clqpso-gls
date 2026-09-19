@@ -42,45 +42,23 @@ def two_opt_giant_tour(
 
     tour = giant_tour.copy()
     improved_overall = False
+    current_tour_cost = _eval_tour_cost(tour, cost_matrix)
 
     for _ in range(max_iterations):
         improved = False
         for i in range(n - 2):
             for j in range(i + 2, n):
-                # We are checking if reversing tour[i+1...j] improves cost
-                # Current edges: (i -> i+1) and (j -> j+1)
-                # New edges:     (i -> j)   and (i+1 -> j+1)
-
-                c_i = tour[i] + 1      # +1 because index 0 is depot
-                c_i1 = tour[i + 1] + 1
-                c_j = tour[j] + 1
-
-                # If j+1 is out of bounds, we consider wrap-around to depot
-                if j + 1 < n:
-                    c_j1 = tour[j + 1] + 1
-                else:
-                    # In a giant tour, the ends technically connect to depot
-                    # but for pure sequencing, we just compare the segments
-                    c_j1 = 0  # Depot
-
-                # Current cost of the two edges being broken
-                current_cost = cost_matrix[c_i, c_i1]
-                if j + 1 < n:
-                    current_cost += cost_matrix[c_j, c_j1]
-                else:
-                    current_cost += cost_matrix[c_j, 0]
-
-                # New cost of the two new edges
-                new_cost = cost_matrix[c_i, c_j]
-                if j + 1 < n:
-                    new_cost += cost_matrix[c_i1, c_j1]
-                else:
-                    new_cost += cost_matrix[c_i1, 0]
-
+                # Construct candidate tour
+                candidate_tour = tour.copy()
+                candidate_tour[i + 1 : j + 1] = candidate_tour[i + 1 : j + 1][::-1]
+                
+                # Evaluate full tour cost for candidate
+                candidate_cost = _eval_tour_cost(candidate_tour, cost_matrix)
+                
                 # Check if new cost is strictly better (with tolerance)
-                if new_cost < current_cost - 1e-6:
-                    # Reverse the segment in place
-                    tour[i + 1 : j + 1] = tour[i + 1 : j + 1][::-1]
+                if candidate_cost < current_tour_cost - 1e-6:
+                    tour = candidate_tour
+                    current_tour_cost = candidate_cost
                     improved = True
                     improved_overall = True
 
@@ -178,9 +156,10 @@ def swap_star(
     demands: np.ndarray,
     vehicle_capacity: float,
 ) -> tuple[SplitResult, bool]:
-    """Apply the SWAP* inter-route operator.
+    """Apply a simplified SWAP*-inspired inter-route operator.
 
-    Upgrade 1: SWAP* (Vidal 2022).
+    An engineering implementation inspired by Vidal (2022), rather than
+    an exact reproduction of the full optimized SWAP* algorithm.
     Exchanges customers between different routes without preserving their
     exact insertion points. It finds the best insertion point in the target
     route for each swapped customer, decoupling extraction and insertion.

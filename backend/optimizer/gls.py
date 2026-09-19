@@ -62,7 +62,8 @@ class GuidedLocalSearch:
             finite_costs = base_cost_matrix[np.isfinite(base_cost_matrix) & (base_cost_matrix > 0)]
             avg_cost = finite_costs.mean() if len(finite_costs) > 0 else 1.0
             
-            # lambda = alpha * (average_cost / N) — standard GLS heuristic
+            # The lambda scaling formula and alpha_gls=0.3 are configurable 
+            # engineering choices for this project, not values directly taken from the paper.
             self._lambda = self.alpha_gls * (avg_cost / max(1, self.n_stops))
             self._lambda_initialized = True
 

@@ -34,7 +34,7 @@ def test_phase4():
     print("=" * 60)
 
     # 1. Setup problem instance
-    print("\n[1/4] Setting up problem instance...")
+    print("\n[1/5] Setting up problem instance...")
     config = load_config()
     
     # Very small instance to trace operators
@@ -60,8 +60,34 @@ def test_phase4():
 
     print(f"  ✓ {num_customers} customers generated")
 
-    # 2. Test 2-opt and Or-opt (Intra-route / Giant Tour)
-    print("\n[2/4] Testing Intra-route Operators (2-opt, Or-opt)...")
+    # 2. Deterministic asymmetric cost matrix test for 2-opt
+    print("\n[2/5] Testing 2-opt on asymmetric cost matrix...")
+    # 5 stops: 0 (depot), 1, 2, 3, 4
+    # Tour: 0 -> 1 -> 2 -> 3 -> 4 -> 0
+    asym_cm = np.full((5, 5), 10.0)
+    asym_cm[1, 2] = 10.0
+    asym_cm[3, 4] = 10.0
+    asym_cm[1, 3] = 5.0
+    asym_cm[2, 4] = 5.0
+    asym_cm[2, 3] = 0.0    # Original internal edge is cheap
+    asym_cm[3, 2] = 100.0  # Reversed internal edge is very expensive
+
+    from backend.optimizer.local_search import _eval_tour_cost
+    tiny_tour = np.array([0, 1, 2, 3])  # customers 0, 1, 2, 3 corresponding to stops 1, 2, 3, 4
+    initial_tiny_cost = _eval_tour_cost(tiny_tour, asym_cm)  # 10 + 10 + 0 + 10 + 10 = 40
+    
+    # Run 2-opt
+    improved_tiny_tour, improved = two_opt_giant_tour(tiny_tour, asym_cm, max_iterations=1)
+    final_tiny_cost = _eval_tour_cost(improved_tiny_tour, asym_cm)
+    
+    # It should NOT have accepted the reversal which would cost 130
+    assert final_tiny_cost <= initial_tiny_cost, "2-opt increased actual tour cost on asymmetric matrix!"
+    assert not improved, "2-opt falsely claimed improvement on asymmetric matrix!"
+    print(f"  ✓ 2-opt correctly rejected harmful reversal (cost: {initial_tiny_cost:.1f} -> {final_tiny_cost:.1f})")
+
+
+    # 3. Test 2-opt and Or-opt (Intra-route / Giant Tour)
+    print("\n[3/5] Testing Intra-route Operators (2-opt, Or-opt)...")
     
     # 2-opt
     two_opt_tour, improved_2opt = two_opt_giant_tour(giant_tour, cm.matrix, max_iterations=20)
@@ -72,15 +98,14 @@ def test_phase4():
     print(f"  ✓ Or-opt improved: {improved_oropt}")
     
     # We should have improved significantly from random
-    from backend.optimizer.local_search import _eval_tour_cost
     initial_cost = _eval_tour_cost(giant_tour, cm.matrix)
     final_cost = _eval_tour_cost(or_opt_tour, cm.matrix)
     
     print(f"  ✓ Giant tour cost: {initial_cost:.1f} -> {final_cost:.1f}")
     assert final_cost <= initial_cost
 
-    # 3. Test SWAP* (Inter-route)
-    print("\n[3/4] Testing Inter-route SWAP*...")
+    # 4. Test SWAP* (Inter-route)
+    print("\n[4/5] Testing Inter-route SWAP*...")
     
     # First, split the optimized giant tour into routes
     split_res = split(or_opt_tour, cm.matrix, demands, vehicle_capacity)
@@ -99,8 +124,8 @@ def test_phase4():
         load = sum(demands[c] for c in route)
         assert load <= vehicle_capacity, f"Route {idx} exceeds capacity!"
 
-    # 4. Test GLS Penalty Framework
-    print("\n[4/4] Testing GLS Penalty Framework...")
+    # 5. Test GLS Penalty Framework
+    print("\n[5/5] Testing GLS Penalty Framework...")
     
     gls = GuidedLocalSearch(n_stops=num_customers + 1, config=config)
     
@@ -125,6 +150,12 @@ def test_phase4():
     
     num_penalized = np.sum(gls.penalties > 0)
     print(f"  ✓ GLS penalized {num_penalized} edges in stagnated solution")
+
+    # Disabled GLS test
+    gls.enabled = False
+    aug_matrix_disabled = gls.get_augmented_cost_matrix(cm.matrix)
+    assert np.allclose(aug_matrix_disabled, cm.matrix), "Disabled GLS must return original matrix"
+    print(f"  ✓ Disabled GLS correctly returns unaugmented matrix")
 
     print("\n" + "=" * 60)
     print("✅ ALL PHASE 4 TESTS PASSED!")
