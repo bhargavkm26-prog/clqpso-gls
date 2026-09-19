@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Play, RotateCcw } from 'lucide-react';
 
@@ -10,7 +10,7 @@ export default function AlgorithmRace() {
   const MAX_ITERATIONS = 200;
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isPlaying && iteration < MAX_ITERATIONS) {
       interval = setInterval(() => {
         setIteration((prev) => prev + 1);

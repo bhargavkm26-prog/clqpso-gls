@@ -1,12 +1,19 @@
-import { TrendingUp, Truck, Zap } from 'lucide-react';
+import { TrendingUp, Truck, Zap, Clock } from 'lucide-react';
 
 interface MetricsProps {
   iteration: number;
   bestFitness: number | null;
   vehicleCount: number;
+  elapsedMs?: number | null;
 }
 
-export default function MetricsSidebar({ iteration, bestFitness, vehicleCount }: MetricsProps) {
+export default function MetricsSidebar({ iteration, bestFitness, vehicleCount, elapsedMs }: MetricsProps) {
+  const formatTime = (ms: number | null | undefined) => {
+    if (!ms) return '---';
+    if (ms < 1000) return `${ms.toFixed(0)} ms`;
+    return `${(ms / 1000).toFixed(2)} s`;
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -16,6 +23,16 @@ export default function MetricsSidebar({ iteration, bestFitness, vehicleCount }:
         </div>
         <div className="text-2xl font-bold text-slate-800">
           {bestFitness ? bestFitness.toFixed(2) : '---'}
+        </div>
+      </div>
+      
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center text-slate-500 mb-1">
+          <Clock className="h-4 w-4 mr-2 text-blue-500" />
+          <span className="text-xs font-semibold uppercase tracking-wider">Elapsed Time</span>
+        </div>
+        <div className="text-2xl font-bold text-slate-800">
+          {formatTime(elapsedMs)}
         </div>
       </div>
       

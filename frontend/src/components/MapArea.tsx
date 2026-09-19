@@ -1,19 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet';
 
 interface MapAreaProps {
   routes: number[][];
   trafficScenario: string;
+  congestedEdges: [number, number][];
 }
-
-// Map styles based on traffic
-const TRAFFIC_STYLES: Record<string, any> = {
-  baseline: { color: '#3b82f6', opacity: 0.1 },
-  moderate_traffic: { color: '#f59e0b', opacity: 0.3 },
-  disruption: { color: '#ef4444', opacity: 0.5 },
-  recovery: { color: '#10b981', opacity: 0.2 },
-};
 
 // Pastel colors for routes
 const ROUTE_COLORS = [
@@ -21,7 +13,7 @@ const ROUTE_COLORS = [
   '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'
 ];
 
-export default function MapArea({ routes, trafficScenario }: MapAreaProps) {
+export default function MapArea({ routes, trafficScenario, congestedEdges }: MapAreaProps) {
   const [nodes, setNodes] = useState<Record<number, {id: number, x: number, y: number, is_depot: boolean}>>({});
   
   useEffect(() => {
@@ -59,6 +51,26 @@ export default function MapArea({ routes, trafficScenario }: MapAreaProps) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      
+      {/* Traffic Overlay (Congested Edges) */}
+      {trafficScenario !== 'baseline' && congestedEdges && congestedEdges.map((edge, idx) => {
+        const u = nodes[edge[0]];
+        const v = nodes[edge[1]];
+        if (!u || !v) return null;
+        
+        return (
+          <Polyline 
+            key={`traffic-${idx}`}
+            positions={[mapCoordinates(u.x, u.y), mapCoordinates(v.x, v.y)]}
+            pathOptions={{
+              color: '#ef4444', // red
+              weight: 6,
+              opacity: 0.5,
+              lineCap: 'round'
+            }}
+          />
+        );
+      })}
       
       {/* Routes */}
       {routes.map((route, idx) => {
@@ -105,8 +117,7 @@ export default function MapArea({ routes, trafficScenario }: MapAreaProps) {
       
       {/* Nodes (Depot and Customers) */}
       {Object.values(nodes).map(node => {
-        // Only show depot and selected customers (assume customers are 1-25)
-        if (!node.is_depot && node.id > 25) return null;
+        // Render all nodes as supplied by the backend
         
         return (
           <CircleMarker

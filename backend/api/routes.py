@@ -76,7 +76,8 @@ async def run_optimization_task(iterations: int):
                 "cost_details": {
                     "total_cost": split_result.total_cost,
                     "travel_time": sum(orch.fitness_evaluator._route_cost(r, orch.cost_matrix_manager.matrix) for r in split_result.routes)
-                }
+                },
+                "elapsed_ms": orch.qpso.convergence_history[-1].elapsed_ms if orch.qpso.convergence_history else 0.0
             })
             
             # Yield control back to event loop to allow other requests (like traffic updates) to process
@@ -133,10 +134,13 @@ async def update_traffic(req: TrafficUpdateRequest):
     with open(scenario_path, 'r') as f:
         scenario_data = json.load(f)
         
+    congested_edges = list(orch.traffic_manager.affected_edges)
+        
     asyncio.create_task(manager.broadcast({
         "type": "traffic_update",
         "scenario_id": req.scenario_id,
-        "affected_edges": scenario_data
+        "affected_edges": scenario_data,
+        "congested_edges": congested_edges
     }))
     
     return TrafficUpdateResponse(

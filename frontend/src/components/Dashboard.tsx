@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, RefreshCcw, Activity, Truck, Map as MapIcon, Clock, TrendingDown } from 'lucide-react';
+import { Play, Square, RefreshCcw, Activity, Truck, Map as MapIcon, TrendingDown } from 'lucide-react';
 import MapArea from './MapArea';
 import MetricsSidebar from './MetricsSidebar';
 import ConvergenceChart from './ConvergenceChart';
@@ -10,9 +10,11 @@ export default function Dashboard() {
   const [isRunning, setIsRunning] = useState(false);
   const [iteration, setIteration] = useState(0);
   const [bestFitness, setBestFitness] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [convergenceData, setConvergenceData] = useState<{iteration: number, cost: number}[]>([]);
   const [routes, setRoutes] = useState<number[][]>([]);
   const [trafficScenario, setTrafficScenario] = useState('baseline');
+  const [congestedEdges, setCongestedEdges] = useState<[number, number][]>([]);
   
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -30,6 +32,9 @@ export default function Dashboard() {
       if (data.type === 'iteration_update') {
         setIteration(data.iteration);
         setBestFitness(data.best_fitness);
+        if (data.elapsed_ms !== undefined) {
+          setElapsedMs(data.elapsed_ms);
+        }
         setRoutes(data.routes);
         
         setConvergenceData(prev => {
@@ -42,6 +47,11 @@ export default function Dashboard() {
         setIsRunning(data.is_running);
       } else if (data.type === 'traffic_update') {
         setTrafficScenario(data.scenario_id);
+        if (data.congested_edges) {
+          setCongestedEdges(data.congested_edges);
+        } else {
+          setCongestedEdges([]);
+        }
       }
     };
     
@@ -128,6 +138,7 @@ export default function Dashboard() {
             iteration={iteration} 
             bestFitness={bestFitness} 
             vehicleCount={routes.length} 
+            elapsedMs={elapsedMs}
           />
           
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
@@ -178,7 +189,7 @@ export default function Dashboard() {
         </div>
         
         <div className="flex-1 relative z-0">
-          <MapArea routes={routes} trafficScenario={trafficScenario} />
+          <MapArea routes={routes} trafficScenario={trafficScenario} congestedEdges={congestedEdges} />
         </div>
         
         {/* Bottom panel: Charts */}
