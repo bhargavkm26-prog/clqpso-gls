@@ -27,6 +27,7 @@ from backend.optimizer.decoder import (
 )
 from backend.optimizer.split import split, evaluate_routes
 from backend.optimizer.fitness import FitnessEvaluator
+from backend.optimizer.initialization import generate_population, logistic_tent_map
 
 
 def test_phase2():
@@ -178,6 +179,60 @@ def test_phase2():
     assert len(set(f"{f:.6f}" for f in fitnesses)) > 1, \
         "Different random keys should produce different fitness values"
     print(f"\n  OK: fitness range [{min(fitnesses):.6f}, {max(fitnesses):.6f}]")
+
+    # ──────────────────────────────────────────────────────────
+    # Test 6: max_vehicles post-check behavior
+    # ──────────────────────────────────────────────────────────
+    print("\n[6/8] Testing max_vehicles constraint (post-check limitation)...")
+    
+    # Unconstrained
+    res_unconstrained = split(giant_tour, cm.matrix, demands, vehicle_capacity, max_vehicles=None)
+    assert res_unconstrained.feasible, "Unconstrained should be feasible"
+    
+    # Constrained but enough vehicles
+    res_constrained_ok = split(giant_tour, cm.matrix, demands, vehicle_capacity, max_vehicles=num_customers)
+    assert res_constrained_ok.feasible, "Should be feasible if max_vehicles is large enough"
+    
+    # Constrained and too few vehicles (forcing failure)
+    res_constrained_fail = split(giant_tour, cm.matrix, demands, vehicle_capacity, max_vehicles=1)
+    assert not res_constrained_fail.feasible, "Should fail if max_vehicles is too restrictive"
+    print(f"  OK: max_vehicles properly flagged as infeasible when exceeded")
+
+    # ──────────────────────────────────────────────────────────
+    # Test 7: Fitness objectives are reflected
+    # ──────────────────────────────────────────────────────────
+    print("\n[7/8] Testing fitness objectives...")
+    
+    eval_no_veh = FitnessEvaluator(
+        cost_matrix=cm.matrix,
+        demands=demands,
+        vehicle_capacity=vehicle_capacity,
+        weights={"travel_time": 0.4, "distance": 0.3, "congestion": 0.2, "vehicle_count": 0.0},
+    )
+    
+    fit_default = evaluator.evaluate(result)
+    fit_no_veh = eval_no_veh.evaluate(result)
+    
+    assert fit_default != fit_no_veh, "Vehicle count weight should affect fitness"
+    
+    details_obj = evaluator.evaluate_detailed(result)
+    assert details_obj["active_objectives"]["travel_time"], "Travel time should be active"
+    assert not details_obj["active_objectives"]["distance"], "Distance should be inactive"
+    assert not details_obj["active_objectives"]["congestion"], "Congestion should be inactive"
+    print(f"  OK: Objectives correctly distributed and flagged")
+
+    # ──────────────────────────────────────────────────────────
+    # Test 8: Valid [0,1] initialization
+    # ──────────────────────────────────────────────────────────
+    print("\n[8/8] Testing chaotic initialization...")
+    
+    pop_1 = generate_population(10, num_customers, seed=0.4321)
+    assert pop_1.shape == (10, num_customers)
+    assert np.all((pop_1 > 0) & (pop_1 < 1)), "All chaotic values must be in (0, 1)"
+    
+    pop_2 = generate_population(10, num_customers, seed=0.99)
+    assert not np.array_equal(pop_1, pop_2), "Different seeds must produce different populations"
+    print("  OK: Chaotic map generates valid bounded distinct particles")
 
     # Final summary
     print("\n" + "=" * 60)

@@ -1,16 +1,21 @@
 """
-O(n) Linear Prins Split Decoder.
+Prins Split Decoder — O(n²) baseline DP.
 
 Partitions a giant customer tour into feasible vehicle routes
 using dynamic programming on a shortest-path DAG.
 
-Blueprint reference: §10 Step 2 (Prins Split), Upgrade 2 (O(n) Linear Split)
+Blueprint reference: §10 Step 2 (Prins Split)
 
 Sources:
     - Prins (2004), "A Simple and Effective Evolutionary Algorithm for the
       Vehicle Routing Problem", Computers & Operations Research.
+
+Potential upgrade (not yet implemented):
     - Vidal (2015), "Split Algorithm in O(n) for the Capacitated Vehicle
-      Routing Problem", Technical Note.
+      Routing Problem", Technical Note.  The O(n) variant uses a
+      dominance-based queue to prune the inner loop.  The current
+      implementation keeps the simpler O(n²) nested-loop DP which is
+      correct and fast enough for instances up to ~200 customers.
 
 The Split decoder constructs a DAG where:
     - Nodes 0..n represent positions in the giant tour
@@ -19,10 +24,6 @@ The Split decoder constructs a DAG where:
     - Arc is feasible only if total demand of segment ≤ vehicle capacity
 
 The shortest path 0→n gives the optimal partition.
-
-The O(n) version uses dominance-based pruning: if extending a route
-from position i to j is always worse than starting a new route at
-some earlier position, the extension is pruned.
 """
 
 from __future__ import annotations
@@ -60,8 +61,9 @@ def split(
 ) -> SplitResult:
     """Split a giant tour into feasible vehicle routes.
 
-    Implements the Prins Split with O(nB) complexity, with
-    dominance-based pruning that approaches O(n) for typical instances.
+    Implements the baseline Prins Split DP with O(n²) complexity
+    (one outer loop over starting positions, one inner loop bounded
+    by vehicle capacity).  No dominance-based pruning is applied.
 
     The cost matrix uses stop indices where:
         - Index 0 = depot
@@ -69,6 +71,12 @@ def split(
 
     The giant_tour contains customer indices 0..n-1 which map to
     stop indices 1..n in the cost matrix.
+
+    **Limitation:** ``max_vehicles`` is enforced as a post-check on the
+    unconstrained DP result.  The DP does not explore alternative
+    partitions that might satisfy the fleet limit at higher cost.
+    A correct integration would require a 2D DP state ``dp[j][k]``
+    (position × route count), deferred to a future upgrade.
 
     Args:
         giant_tour: 1D array of customer indices (0-based) in visitation order.
@@ -106,7 +114,7 @@ def split(
     # predecessor[j] = the split point that achieves dp[j]
     predecessor = np.full(n + 1, -1, dtype=np.int64)
 
-    # Build the DAG with dominance-based pruning
+    # O(n²) nested-loop DP
     for i in range(n):
         if dp[i] >= INF:
             continue

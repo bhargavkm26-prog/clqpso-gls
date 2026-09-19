@@ -13,7 +13,11 @@ Source: 2024, Applied Soft Computing implementations.
 import numpy as np
 
 
-def logistic_tent_map(size: tuple[int, ...], r: float = 3.99) -> np.ndarray:
+def logistic_tent_map(
+    size: tuple[int, ...],
+    r: float = 3.99,
+    seed: float = 0.4321,
+) -> np.ndarray:
     """Generate chaotic numbers using the Logistic-Tent map.
 
     The Logistic-Tent map combines the Logistic map and the Tent map:
@@ -23,6 +27,8 @@ def logistic_tent_map(size: tuple[int, ...], r: float = 3.99) -> np.ndarray:
     Args:
         size: Shape of the output array.
         r: Control parameter (typically near 4.0 for deep chaos).
+        seed: Initial value for the chaotic sequence in (0, 1).
+            Defaults to 0.4321 for backward compatibility.
 
     Returns:
         NumPy array of chaotic values in (0, 1).
@@ -30,9 +36,10 @@ def logistic_tent_map(size: tuple[int, ...], r: float = 3.99) -> np.ndarray:
     n_elements = np.prod(size)
     seq = np.empty(n_elements, dtype=np.float64)
 
-    # Initialize with a random value avoiding 0, 0.5, 1
-    # We use a fixed tiny offset to avoid fixed points
-    x = 0.4321
+    # Validate and clamp seed away from fixed points (0, 0.25, 0.5, 0.75, 1.0)
+    x = float(seed)
+    if x <= 0.0 or x >= 1.0 or x == 0.5 or x == 0.25 or x == 0.75:
+        x = 0.4321
 
     # Burn-in phase to eliminate transient effects
     for _ in range(50):
@@ -55,3 +62,21 @@ def logistic_tent_map(size: tuple[int, ...], r: float = 3.99) -> np.ndarray:
         seq[i] = x
 
     return seq.reshape(size)
+
+
+def generate_population(
+    n_particles: int,
+    n_dimensions: int,
+    seed: float = 0.4321,
+) -> np.ndarray:
+    """Generate an entire population using a single chaotic sequence.
+
+    Args:
+        n_particles: Number of particles (population size).
+        n_dimensions: Number of dimensions per particle (e.g., customers).
+        seed: Initial chaotic seed.
+
+    Returns:
+        2D array of shape (n_particles, n_dimensions) with values in (0, 1).
+    """
+    return logistic_tent_map((n_particles, n_dimensions), seed=seed)
