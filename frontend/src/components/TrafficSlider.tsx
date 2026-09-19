@@ -2,7 +2,7 @@ import React from 'react';
 
 const SCENARIOS = [
   { id: 'baseline', label: 'Baseline', color: 'bg-emerald-500' },
-  { id: 'moderate_traffic', label: 'Moderate', color: 'bg-yellow-500' },
+  { id: 'moderate', label: 'Moderate', color: 'bg-yellow-500' },
   { id: 'disruption', label: 'Disruption', color: 'bg-red-500' },
   { id: 'recovery', label: 'Recovery', color: 'bg-blue-500' }
 ];

@@ -56,8 +56,10 @@ fitness:
   normalize: true
 
 graph:
-  source: synthetic  # osmnx | synthetic | custom_json
-  city: "Koramangala, Bangalore, Karnataka, India"
+  source: osmnx
+  city: "Bengaluru, Karnataka, India"
+  lat: 12.9716
+  lng: 77.5946
   network_type: drive
   shortest_path: dijkstra  # dijkstra | bidirectional
   synthetic:
@@ -85,7 +87,7 @@ benchmark:
 
 api:
   host: "0.0.0.0"
-  port: 8000
+  port: 8080
   cors_origins:
     - "http://localhost:5173"
     - "http://localhost:3000"

@@ -60,7 +60,7 @@ class CostMatrix:
         self.idx_to_stop = {idx: node for idx, node in enumerate(self.stops)}
 
         # Compute all-pairs shortest paths
-        self._raw_costs = all_pairs_dijkstra(graph, self.stops, weight=weight)
+        self._raw_costs, self._raw_paths = all_pairs_dijkstra(graph, self.stops, weight=weight)
 
         # Build dense matrix
         self.matrix = self._build_matrix()
@@ -137,6 +137,20 @@ class CostMatrix:
             total += c
         return total
 
+    def get_path(self, src_node: int, dst_node: int) -> list[int]:
+        """Get the cached shortest path between two nodes.
+
+        Args:
+            src_node: Source node ID.
+            dst_node: Target node ID.
+
+        Returns:
+            List of node IDs forming the shortest path.
+        """
+        if src_node in self._raw_paths and dst_node in self._raw_paths[src_node]:
+            return self._raw_paths[src_node][dst_node]
+        return []
+
     def update(
         self,
         graph: nx.DiGraph,
@@ -151,11 +165,11 @@ class CostMatrix:
             affected_edges: Set of changed edges (for selective update).
         """
         if affected_edges:
-            self._raw_costs = selective_update(
-                graph, self._raw_costs, self.stops, affected_edges, self.weight
+            self._raw_costs, self._raw_paths = selective_update(
+                graph, self._raw_costs, self._raw_paths, self.stops, affected_edges, self.weight
             )
         else:
-            self._raw_costs = all_pairs_dijkstra(graph, self.stops, self.weight)
+            self._raw_costs, self._raw_paths = all_pairs_dijkstra(graph, self.stops, self.weight)
 
         self.matrix = self._build_matrix()
 

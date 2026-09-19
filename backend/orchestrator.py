@@ -71,26 +71,66 @@ class OptimizerOrchestrator:
     def setup_problem(
         self,
         num_customers: int | None = None,
-        scenario_file: str | None = None
+        scenario_file: str | None = None,
+        depot_coords: tuple[float, float] | None = None,
+        customer_coords: list[tuple[float, float]] | None = None,
+        vehicle_capacity: float | None = None,
+        max_vehicles: int | None = None
     ) -> None:
         """Initialize the graph, traffic, and cost matrix."""
         logger.info("Setting up problem instance...")
         
         # 1. Build Graph
-        graph_config = self.config.get("graph", {})
-        self.graph = build_graph(graph_config)
+        if self.graph is None:
+            graph_config = self.config.get("graph", {})
+            self.graph = build_graph(graph_config)
         
         # 2. Place Customers
         vrp_config = self.config.get("vrp", {})
-        if num_customers is None:
-            num_customers = vrp_config.get("num_customers", 50)
+        
+        if depot_coords and customer_coords:
+            # Snap coordinates to nearest graph nodes
+            # coords are (lat, lng). Graph nodes have 'x' (lng) and 'y' (lat).
+            def find_nearest_node(lat, lng):
+                best_node = None
+                best_dist = float('inf')
+                for n, data in self.graph.nodes(data=True):
+                    # use simple euclidean for snapping on synthetic, or approximate for lat/lng
+                    dy = data.get('y', 0) - lat
+                    dx = data.get('x', 0) - lng
+                    dist = dx*dx + dy*dy
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_node = n
+                return best_node
+
+            self.depot = find_nearest_node(depot_coords[0], depot_coords[1])
+            self.customers = []
+            for lat, lng in customer_coords:
+                node = find_nearest_node(lat, lng)
+                if node is not None and node not in self.customers and node != self.depot:
+                    self.customers.append(node)
+                    
+            # Generate random demands 1-30 for each selected customer
+            demand_dict = {c: self.rng.randint(1, 30) for c in self.customers}
+            self.demands = np.array([demand_dict[c] for c in self.customers], dtype=np.float64)
+            num_customers = len(self.customers)
+        else:
+            if num_customers is None:
+                num_customers = vrp_config.get("num_customers", 50)
+                
+            num_customers = min(num_customers, self.graph.number_of_nodes() - 1)
+            self.depot, self.customers, demand_dict = place_customers_and_depot(
+                self.graph, num_customers=num_customers, seed=self.rng.randint(0, 10000)
+            )
+            self.demands = np.array([demand_dict[c] for c in self.customers], dtype=np.float64)
             
-        num_customers = min(num_customers, self.graph.number_of_nodes() - 1)
-        self.depot, self.customers, demand_dict = place_customers_and_depot(
-            self.graph, num_customers=num_customers, seed=self.rng.randint(0, 10000)
-        )
-        self.demands = np.array([demand_dict[c] for c in self.customers], dtype=np.float64)
-        self.vehicle_capacity = vrp_config.get("vehicle_capacity", 100.0)
+        self.vehicle_capacity = vehicle_capacity if vehicle_capacity is not None else vrp_config.get("vehicle_capacity", 100.0)
+        
+        if max_vehicles is not None:
+            if "vrp" not in self.config:
+                self.config["vrp"] = {}
+            self.config["vrp"]["max_vehicles"] = max_vehicles
 
         # 3. Traffic Manager
         if scenario_file is None:

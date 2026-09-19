@@ -40,7 +40,12 @@ export default function ConvergenceChart({ data }: ChartProps) {
           tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => value.toFixed(0)}
+          tickFormatter={(value) => {
+            const range = maxCost - minCost;
+            if (range === 0 || range < 5) return value.toFixed(2);
+            if (range < 50) return value.toFixed(1);
+            return value.toFixed(0);
+          }}
         />
         <Tooltip 
           contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '8px 12px' }}

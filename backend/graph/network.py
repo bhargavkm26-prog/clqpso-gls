@@ -78,11 +78,35 @@ def _build_osmnx_graph(config: dict[str, Any]) -> nx.DiGraph:
         print("WARNING: osmnx not installed. Falling back to synthetic graph.")
         return _build_synthetic_graph(config)
 
-    city = config.get("city", "Koramangala, Bangalore, Karnataka, India")
+    city = config.get("city", "Bengaluru, Karnataka, India")
     network_type = config.get("network_type", "drive")
+    
+    # Read lat and lng from config, default to Bengaluru
+    lat = config.get("lat", 12.9716)
+    lng = config.get("lng", 77.5946)
+    radius = config.get("radius", 10000)
 
-    print(f"Downloading road network for: {city}")
-    G_multi = ox.graph_from_place(city, network_type=network_type)
+    import os
+    import pickle
+    import hashlib
+
+    # Check for cached graph
+    cache_key = f"{lat}_{lng}_{radius}_{network_type}"
+    cache_filename = f"osmnx_graph_{hashlib.md5(cache_key.encode()).hexdigest()}.pkl"
+    cache_dir = os.path.join(os.path.dirname(__file__), ".cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, cache_filename)
+
+    if os.path.exists(cache_path):
+        print(f"Loading cached road network from: {cache_path}")
+        with open(cache_path, "rb") as f:
+            G = pickle.load(f)
+        print(f"Graph loaded from cache: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+        return G
+
+    print(f"Downloading road network for: {city} at ({lat}, {lng}) with radius {radius}m")
+    # Using graph_from_point to avoid Nominatim place lookup failures
+    G_multi = ox.graph_from_point((lat, lng), dist=radius, network_type=network_type)
 
     # ------------------------------------------------------------------
     # Step 1: Normalize attributes on every edge of the MultiDiGraph
@@ -139,6 +163,11 @@ def _build_osmnx_graph(config: dict[str, Any]) -> nx.DiGraph:
         G.add_edge(u, v, **data)
 
     print(f"Graph loaded: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+
+    print(f"Saving graph to cache: {cache_path}")
+    with open(cache_path, "wb") as f:
+        pickle.dump(G, f)
+
     return G
 
 

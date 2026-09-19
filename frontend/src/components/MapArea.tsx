@@ -1,145 +1,115 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet';
+import { useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix Leaflet's default icon path issues with Webpack/Vite
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom icons
+const depotIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const customerIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 interface MapAreaProps {
+  nodes: Record<number, { id: number, x: number, y: number, is_depot: boolean }>;
   routes: number[][];
-  trafficScenario: string;
-  congestedEdges: [number, number][];
+  trafficEdges?: [number, number][]; // optional congestion edges
+  depot?: [number, number] | null;
+  customers?: [number, number][];
+  onMapClick?: (lat: number, lng: number) => void;
+  interactionMode?: 'view' | 'depot' | 'customer';
 }
 
-// Pastel colors for routes
-const ROUTE_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', 
-  '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'
-];
+function MapClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      if (onClick) onClick(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  return null;
+}
 
-export default function MapArea({ routes, trafficScenario, congestedEdges }: MapAreaProps) {
-  const [nodes, setNodes] = useState<Record<number, {id: number, x: number, y: number, is_depot: boolean}>>({});
-  
-  useEffect(() => {
-    // Fetch nodes for visualization
-    fetch('http://localhost:8000/api/nodes')
-      .then(res => res.json())
-      .then(data => {
-        const nodeMap: Record<number, any> = {};
-        data.nodes.forEach((n: any) => {
-          nodeMap[n.id] = n;
-        });
-        setNodes(nodeMap);
-      })
-      .catch(console.error);
-  }, []);
+const COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
 
-  // Map 0-100 coordinates to actual lat/lng in Bangalore (Koramangala approx)
-  const mapCoordinates = (x: number, y: number): [number, number] => {
-    const BASE_LAT = 12.92;
-    const BASE_LNG = 77.62;
-    const SCALE = 0.0005; // ~50m per unit
-    return [BASE_LAT + y * SCALE, BASE_LNG + x * SCALE];
-  };
+export default function MapArea({ nodes, routes, depot, customers, onMapClick, interactionMode }: MapAreaProps) {
+  const center: [number, number] = useMemo(() => {
+    // Center on Bengaluru by default if no nodes
+    if (Object.keys(nodes).length > 0) {
+      const firstNode = Object.values(nodes)[0];
+      if (firstNode.y !== 0) return [firstNode.y, firstNode.x];
+    }
+    return [12.9716, 77.5946];
+  }, [nodes]);
 
-  const center = mapCoordinates(50, 50);
+  // Decode routes into polylines
+  const polylines = useMemo(() => {
+    return routes.map((route, idx) => {
+      return route.map(nodeId => {
+        const n = nodes[nodeId];
+        return n ? [n.y, n.x] as [number, number] : null;
+      }).filter(p => p !== null) as [number, number][];
+    });
+  }, [routes, nodes]);
+
+  // If we have explicit depot and customers (from clicks)
+  const renderedDepot = depot || (Object.values(nodes).find(n => n.is_depot) ? [Object.values(nodes).find(n => n.is_depot)!.y, Object.values(nodes).find(n => n.is_depot)!.x] : null);
+  const renderedCustomers = customers || Object.values(nodes).filter(n => !n.is_depot).map(n => [n.y, n.x] as [number, number]);
 
   return (
-    <MapContainer 
-      center={center} 
-      zoom={14} 
-      style={{ height: '100%', width: '100%' }}
-      zoomControl={false}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      
-      {/* Traffic Overlay (Congested Edges) */}
-      {trafficScenario !== 'baseline' && congestedEdges && congestedEdges.map((edge, idx) => {
-        const u = nodes[edge[0]];
-        const v = nodes[edge[1]];
-        if (!u || !v) return null;
+    <div className={`h-full w-full relative ${interactionMode !== 'view' ? 'cursor-crosshair' : ''}`}>
+      <MapContainer 
+        center={center} 
+        zoom={13} 
+        style={{ width: '100%', height: '100%', background: '#0a0a0f' }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          className="map-tiles"
+        />
         
-        return (
+        <MapClickHandler onClick={onMapClick} />
+
+        {/* Routes */}
+        {polylines.map((path, idx) => (
           <Polyline 
-            key={`traffic-${idx}`}
-            positions={[mapCoordinates(u.x, u.y), mapCoordinates(v.x, v.y)]}
-            pathOptions={{
-              color: '#ef4444', // red
-              weight: 6,
-              opacity: 0.5,
-              lineCap: 'round'
-            }}
+            key={`route-${idx}`}
+            positions={path}
+            color={COLORS[idx % COLORS.length]}
+            weight={3}
+            opacity={0.8}
           />
-        );
-      })}
-      
-      {/* Routes */}
-      {routes.map((route, idx) => {
-        const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
-        
-        // Build coordinates array (Depot -> Customers -> Depot)
-        const coords: [number, number][] = [];
-        const depot = nodes[0];
-        
-        if (depot) {
-          coords.push(mapCoordinates(depot.x, depot.y));
-        }
-        
-        route.forEach(customerIdx => {
-          // customerIdx is 0-based in route, but nodes have depot at 0 and customers at 1..n
-          const node = nodes[customerIdx + 1];
-          if (node) {
-            coords.push(mapCoordinates(node.x, node.y));
-          }
-        });
-        
-        if (depot) {
-          coords.push(mapCoordinates(depot.x, depot.y));
-        }
+        ))}
 
-        if (coords.length < 2) return null;
+        {/* Depot */}
+        {renderedDepot && (
+          <Marker position={renderedDepot as [number, number]} icon={depotIcon} />
+        )}
 
-        return (
-          <div key={`route-group-${idx}`}>
-            <Polyline 
-              positions={coords} 
-              pathOptions={{ 
-                color: color, 
-                weight: 4, 
-                opacity: 0.8,
-                lineCap: 'round',
-                lineJoin: 'round',
-                dashArray: trafficScenario !== 'baseline' ? '10, 10' : undefined 
-              }} 
-            />
-          </div>
-        );
-      })}
-      
-      {/* Nodes (Depot and Customers) */}
-      {Object.values(nodes).map(node => {
-        // Render all nodes as supplied by the backend
-        
-        return (
-          <CircleMarker
-            key={`node-${node.id}`}
-            center={mapCoordinates(node.x, node.y)}
-            radius={node.is_depot ? 8 : 5}
-            pathOptions={{
-              fillColor: node.is_depot ? '#000000' : '#ffffff',
-              color: node.is_depot ? '#ffffff' : '#475569',
-              weight: 2,
-              fillOpacity: 1
-            }}
-          >
-            <Popup>
-              <div className="font-sans">
-                <div className="font-bold text-slate-800">{node.is_depot ? 'Depot' : `Customer ${node.id}`}</div>
-                {!node.is_depot && <div className="text-xs text-slate-500 mt-1">Node ID: {node.id}</div>}
-              </div>
-            </Popup>
-          </CircleMarker>
-        );
-      })}
-    </MapContainer>
+        {/* Customers */}
+        {renderedCustomers.map((pos, idx) => (
+          <Marker key={`customer-${idx}`} position={pos} icon={customerIcon} />
+        ))}
+      </MapContainer>
+    </div>
   );
 }

@@ -68,8 +68,8 @@ def all_pairs_dijkstra(
     graph: nx.DiGraph,
     nodes: list[int],
     weight: str = "travel_time",
-) -> dict[int, dict[int, float]]:
-    """Compute shortest-path costs between all pairs of specified nodes.
+) -> tuple[dict[int, dict[int, float]], dict[int, dict[int, list[int]]]]:
+    """Compute shortest-path costs and paths between all pairs of specified nodes.
 
     Uses Dijkstra from each node. For N stops on a graph with M edges,
     complexity is O(N × (M + V log V)).
@@ -80,39 +80,76 @@ def all_pairs_dijkstra(
         weight: Edge attribute to use as cost.
 
     Returns:
-        Nested dict: costs[source][target] = shortest_path_cost.
+        Tuple of (costs, paths) where:
+        costs[source][target] = shortest_path_cost
+        paths[source][target] = list of node IDs forming the shortest path
     """
     costs: dict[int, dict[int, float]] = {}
-    node_set = set(nodes)
+    paths: dict[int, dict[int, list[int]]] = {}
+
+    # Performance optimization: extract bounding-box subgraph
+    lats = [graph.nodes[n].get('y') for n in nodes if 'y' in graph.nodes[n]]
+    lons = [graph.nodes[n].get('x') for n in nodes if 'x' in graph.nodes[n]]
+    
+    if lats and lons:
+        min_lat, max_lat = min(lats), max(lats)
+        min_lon, max_lon = min(lons), max(lons)
+        lat_margin = max((max_lat - min_lat) * 0.2, 0.005)
+        lon_margin = max((max_lon - min_lon) * 0.2, 0.005)
+        
+        valid_nodes = {
+            n for n, d in graph.nodes(data=True)
+            if 'y' in d and 'x' in d and
+            (min_lat - lat_margin <= d['y'] <= max_lat + lat_margin) and
+            (min_lon - lon_margin <= d['x'] <= max_lon + lon_margin)
+        }
+        # Ensure target nodes are always included
+        valid_nodes.update(nodes)
+        
+        # Only use subgraph if it reduces size meaningfully (e.g., < 80% of original graph)
+        if len(valid_nodes) < len(graph.nodes) * 0.8:
+            search_graph = graph.subgraph(valid_nodes)
+        else:
+            search_graph = graph
+    else:
+        search_graph = graph
 
     for source in nodes:
+        costs[source] = {}
+        paths[source] = {}
         try:
-            # Compute shortest paths from source to all reachable nodes
-            lengths = nx.single_source_dijkstra_path_length(
-                graph, source, weight=weight
+            # Compute shortest paths from source to all reachable nodes on subgraph
+            lengths, p = nx.single_source_dijkstra(
+                search_graph, source, weight=weight
             )
-            costs[source] = {}
             for target in nodes:
                 if target == source:
                     costs[source][target] = 0.0
+                    paths[source][target] = [source]
                 elif target in lengths:
                     costs[source][target] = float(lengths[target])
+                    paths[source][target] = p[target]
                 else:
                     costs[source][target] = float("inf")
+                    paths[source][target] = []
         except nx.NodeNotFound:
-            costs[source] = {t: float("inf") for t in nodes}
+            for target in nodes:
+                costs[source][target] = float("inf")
+                paths[source][target] = []
             costs[source][source] = 0.0
+            paths[source][source] = [source]
 
-    return costs
+    return costs, paths
 
 
 def selective_update(
     graph: nx.DiGraph,
     existing_costs: dict[int, dict[int, float]],
+    existing_paths: dict[int, dict[int, list[int]]],
     nodes: list[int],
     affected_edges: set[tuple[int, int]],
     weight: str = "travel_time",
-) -> dict[int, dict[int, float]]:
+) -> tuple[dict[int, dict[int, float]], dict[int, dict[int, list[int]]]]:
     """Recompute the stop-to-stop cost matrix after edge-weight changes.
 
     §24 envisions identifying which stop-to-stop pairs are affected by
@@ -130,18 +167,18 @@ def selective_update(
 
     Args:
         graph: Road network DiGraph.
-        existing_costs: Current cost dictionary (unused in this
-            conservative implementation — kept for API compatibility).
+        existing_costs: Current cost dictionary.
+        existing_paths: Current paths dictionary.
         nodes: List of optimization stop nodes.
         affected_edges: Set of (u, v) edges that changed.
-            If empty, the existing costs are returned unchanged.
+            If empty, the existing costs/paths are returned unchanged.
         weight: Edge attribute to use as cost.
 
     Returns:
-        Updated cost dictionary (full recomputation).
+        Tuple of updated (costs, paths).
     """
     if not affected_edges:
-        return existing_costs
+        return existing_costs, existing_paths
 
     # Conservative full recomputation — always correct.
     return all_pairs_dijkstra(graph, nodes, weight=weight)
