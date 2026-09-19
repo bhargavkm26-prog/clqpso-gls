@@ -1,0 +1,91 @@
+# CLQPSO-GLS Configuration
+# All algorithm parameters in one file. No magic numbers in code.
+
+optimizer:
+  population_size: 128
+  max_iterations: 200
+
+  alpha:
+    initial: 1.0
+    min: 0.5
+    max: 1.2
+    mode: per_particle  # global | per_particle
+
+  chaotic_initialization:
+    enabled: true
+    map: logistic_tent
+    seed: 0.3171  # avoid fixed points {0, 0.25, 0.5, 0.75, 1}
+
+  warm_start:
+    enabled: false  # enable when pgvector is available
+    fraction: 0.20
+    similarity_threshold: 0.85
+
+  levy:
+    enabled: true
+    beta: 1.5
+    stagnation_patience: 15
+    population_fraction: 0.50
+    adaptive_scale: true  # scale proportional to (1 - diversity)
+
+  gls:
+    enabled: true
+    particle_fraction: 0.30
+    max_local_search_iterations: 50
+    alpha_gls: 0.3
+    operators:
+      - two_opt
+      - or_opt
+      - swap_star
+
+  stopping:
+    convergence_patience: 50
+    time_budget_ms: 30000
+
+  diversity:
+    d_low: 0.1
+    d_high: 0.4
+    metric: continuous_random_key
+
+fitness:
+  weights:
+    travel_time: 0.4
+    distance: 0.3
+    congestion: 0.2
+    vehicle_count: 0.1
+  normalize: true
+
+graph:
+  source: synthetic  # osmnx | synthetic | custom_json
+  city: "Koramangala, Bangalore, Karnataka, India"
+  network_type: drive
+  shortest_path: dijkstra  # dijkstra | bidirectional
+  synthetic:
+    grid_size: 20  # 20x20 grid = 400 nodes
+    edge_length: 200  # meters
+    speed_limit: 40  # km/h
+
+vrp:
+  vehicle_capacity: 100
+  max_vehicles: 25
+  depot_index: 0
+  num_customers: 50
+
+benchmark:
+  instances:
+    - A-n32-k5
+    - A-n53-k7
+    - A-n80-k10
+  seeds: [42, 123, 456, 789, 1024]
+  algorithms:
+    - clqpso_gls
+    - classical_pso
+    - genetic_algorithm
+    - ortools
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "http://localhost:5173"
+    - "http://localhost:3000"

@@ -1,0 +1,17 @@
+{
+  "name": "major_disruption",
+  "description": "Road closure near city center with cascading congestion.",
+  "edge_updates": [],
+  "region_updates": [
+    {
+      "center_node": 247,
+      "radius_hops": 4,
+      "congestion_factor": 3.0
+    },
+    {
+      "center_node": 247,
+      "radius_hops": 8,
+      "congestion_factor": 1.8
+    }
+  ]
+}
