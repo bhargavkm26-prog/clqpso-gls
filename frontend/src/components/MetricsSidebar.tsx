@@ -16,42 +16,46 @@ export default function MetricsSidebar({ iteration, bestFitness, vehicleCount, e
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center text-slate-500 mb-1">
-          <Zap className="h-4 w-4 mr-2 text-amber-500" />
-          <span className="text-xs font-semibold uppercase tracking-wider">Best Fitness</span>
+      <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 shadow-inner relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+        <div className="flex items-center text-slate-400 mb-2 relative z-10">
+          <Zap className="h-4 w-4 mr-2 text-amber-400" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Best Fitness</span>
         </div>
-        <div className="text-2xl font-bold text-slate-800">
+        <div className="text-3xl font-black text-white font-mono tracking-tight relative z-10">
           {bestFitness ? bestFitness.toFixed(2) : '---'}
         </div>
       </div>
       
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center text-slate-500 mb-1">
-          <Clock className="h-4 w-4 mr-2 text-blue-500" />
-          <span className="text-xs font-semibold uppercase tracking-wider">Elapsed Time</span>
+      <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 shadow-inner relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+        <div className="flex items-center text-slate-400 mb-2 relative z-10">
+          <Clock className="h-4 w-4 mr-2 text-blue-400" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Elapsed Time</span>
         </div>
-        <div className="text-2xl font-bold text-slate-800">
+        <div className="text-3xl font-black text-white font-mono tracking-tight relative z-10">
           {formatTime(elapsedMs)}
         </div>
       </div>
       
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center text-slate-500 mb-1">
-          <TrendingUp className="h-4 w-4 mr-2 text-emerald-500" />
-          <span className="text-xs font-semibold uppercase tracking-wider">Iteration</span>
+      <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 shadow-inner relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+        <div className="flex items-center text-slate-400 mb-2 relative z-10">
+          <TrendingUp className="h-4 w-4 mr-2 text-emerald-400" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Iteration</span>
         </div>
-        <div className="text-2xl font-bold text-slate-800">
-          {iteration} <span className="text-sm font-normal text-slate-400">/ 1000</span>
+        <div className="text-3xl font-black text-white font-mono tracking-tight flex items-baseline relative z-10">
+          {iteration} <span className="text-sm font-semibold text-slate-500 ml-2">/ 1000</span>
         </div>
       </div>
       
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center text-slate-500 mb-1">
-          <Truck className="h-4 w-4 mr-2 text-indigo-500" />
-          <span className="text-xs font-semibold uppercase tracking-wider">Active Vehicles</span>
+      <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 shadow-inner relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
+        <div className="flex items-center text-slate-400 mb-2 relative z-10">
+          <Truck className="h-4 w-4 mr-2 text-indigo-400" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Active Routes</span>
         </div>
-        <div className="text-2xl font-bold text-slate-800">
+        <div className="text-3xl font-black text-white font-mono tracking-tight relative z-10">
           {vehicleCount}
         </div>
       </div>

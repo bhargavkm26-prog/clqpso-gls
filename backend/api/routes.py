@@ -52,14 +52,19 @@ async def run_optimization_task(iterations: int):
     
     if orch.qpso is None:
         orch._init_optimizer_components()
+        
+    orch.qpso.max_iter = iterations
     
     try:
-        for i in range(iterations):
+        while orch.qpso.iteration < iterations:
             if not _is_running:
                 break
                 
-            # Perform one iteration of QPSO (which includes local search/GLS/levy)
-            orch.qpso.step()
+            if orch.qpso.should_stop():
+                break
+                
+            # Perform ONE COMPLETE ORCHESTRATED iteration
+            orch.step()
             
             # Get best route
             best_fitness = float(orch.qpso.gbest_fitness)
@@ -75,7 +80,7 @@ async def run_optimization_task(iterations: int):
                 "routes": split_result.routes,
                 "cost_details": {
                     "total_cost": split_result.total_cost,
-                    "travel_time": sum(orch.fitness_evaluator._route_cost(r, orch.cost_matrix_manager.matrix) for r in split_result.routes)
+                    "travel_time": split_result.total_cost
                 },
                 "elapsed_ms": orch.qpso.convergence_history[-1].elapsed_ms if orch.qpso.convergence_history else 0.0
             })
@@ -164,8 +169,8 @@ async def get_status():
         
     orch = _orchestrator
     best_cost = None
-    if orch.qpso and len(orch.qpso.gbest_fitness) > 0:
-        best_cost = float(orch.qpso.gbest_fitness.min())
+    if orch.qpso and orch.qpso.gbest_fitness is not None and orch.qpso.gbest_fitness != float('inf'):
+        best_cost = float(orch.qpso.gbest_fitness)
         
     return SystemStatusResponse(
         is_running=_is_running,

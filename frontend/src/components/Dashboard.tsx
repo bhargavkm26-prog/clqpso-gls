@@ -121,19 +121,21 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-800 font-sans">
+    <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800 font-sans">
       
-      {/* Sidebar */}
-      <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
-        <div className="p-5 border-b border-slate-100 flex items-center space-x-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-          <Activity className="h-6 w-6 text-blue-200" />
+      {/* Sidebar - Dark Professional Theme */}
+      <div className="w-80 bg-slate-900 flex flex-col shadow-2xl z-20 shrink-0">
+        <div className="p-6 border-b border-slate-800 flex items-center space-x-4 bg-slate-900/50">
+          <div className="bg-indigo-500/20 p-2 rounded-lg border border-indigo-500/30">
+            <Activity className="h-6 w-6 text-indigo-400" />
+          </div>
           <div>
-            <h1 className="font-bold text-lg tracking-tight">CLQPSO-GLS</h1>
-            <p className="text-xs text-blue-200 uppercase tracking-wider font-semibold">Quantum VRP Optimizer</p>
+            <h1 className="font-bold text-lg tracking-tight text-white">CLQPSO<span className="text-indigo-400">-GLS</span></h1>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">Quantum VRP Optimizer</p>
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
           <MetricsSidebar 
             iteration={iteration} 
             bestFitness={bestFitness} 
@@ -141,31 +143,31 @@ export default function Dashboard() {
             elapsedMs={elapsedMs}
           />
           
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-500 mb-3 flex items-center uppercase tracking-wider">
-              <MapIcon className="h-4 w-4 mr-2" /> Traffic Scenario
+          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+            <h3 className="text-xs font-semibold text-slate-300 mb-4 flex items-center uppercase tracking-wider">
+              <MapIcon className="h-4 w-4 mr-2 text-blue-400" /> Traffic Scenario
             </h3>
             <TrafficSlider scenario={trafficScenario} onChange={handleScenarioChange} />
           </div>
           
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-             <h3 className="text-sm font-semibold text-slate-500 mb-3 flex items-center uppercase tracking-wider">
-              <Truck className="h-4 w-4 mr-2" /> Controls
+          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+             <h3 className="text-xs font-semibold text-slate-300 mb-4 flex items-center uppercase tracking-wider">
+              <Truck className="h-4 w-4 mr-2 text-emerald-400" /> Controls
             </h3>
-            <div className="flex space-x-2">
+            <div className="flex space-x-3">
               {!isRunning ? (
                 <button 
                   onClick={handleStart}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 flex justify-center items-center font-medium shadow-sm shadow-blue-200 transition-colors"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-2.5 px-4 flex justify-center items-center font-semibold shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all duration-200 border border-indigo-500"
                 >
-                  <Play className="h-4 w-4 mr-2" fill="currentColor" /> Start
+                  <Play className="h-4 w-4 mr-2" fill="currentColor" /> START
                 </button>
               ) : (
                 <button 
                   onClick={handleStop}
-                  className="flex-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg py-2.5 px-4 flex justify-center items-center font-medium shadow-sm shadow-rose-200 transition-colors"
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg py-2.5 px-4 flex justify-center items-center font-semibold shadow-[0_0_15px_rgba(225,29,72,0.3)] transition-all duration-200 border border-rose-500"
                 >
-                  <Square className="h-4 w-4 mr-2" fill="currentColor" /> Stop
+                  <Square className="h-4 w-4 mr-2" fill="currentColor" /> STOP
                 </button>
               )}
             </div>
@@ -173,17 +175,22 @@ export default function Dashboard() {
         </div>
       </div>
       
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col relative">
-        <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur rounded-lg shadow border border-slate-200 p-3 flex items-center space-x-4">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative min-w-0">
+        
+        {/* Top Status Pill overlaying map */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200/60 px-5 py-2.5 flex items-center space-x-6">
            <div className="flex items-center">
-             <div className={`h-2.5 w-2.5 rounded-full mr-2 ${isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
-             <span className="text-sm font-medium text-slate-600">{isRunning ? 'Optimizer Running' : 'Idle'}</span>
+             <div className="relative flex h-3 w-3 mr-3">
+               {isRunning && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+               <span className={`relative inline-flex rounded-full h-3 w-3 ${isRunning ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+             </div>
+             <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">{isRunning ? 'Optimizer Running' : 'System Idle'}</span>
            </div>
            {isRunning && (
-             <div className="flex items-center pl-4 border-l border-slate-200">
-                <RefreshCcw className="h-4 w-4 text-blue-500 mr-2 animate-spin-slow" />
-                <span className="text-sm font-semibold text-blue-700">Iteration {iteration}</span>
+             <div className="flex items-center pl-6 border-l border-slate-200">
+                <RefreshCcw className="h-4 w-4 text-indigo-500 mr-2 animate-spin-slow" />
+                <span className="text-sm font-bold text-indigo-700 font-mono tracking-tight">ITERATION {iteration}</span>
              </div>
            )}
         </div>
@@ -193,18 +200,21 @@ export default function Dashboard() {
         </div>
         
         {/* Bottom panel: Charts */}
-        <div className="h-[26rem] bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 overflow-hidden flex flex-col md:flex-row gap-6">
+        <div className="h-[24rem] bg-white border-t border-slate-200 p-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)] z-10 overflow-hidden flex flex-col xl:flex-row gap-6 relative">
            
-           <div className="flex-1 flex flex-col h-full">
-             <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center shrink-0">
-                <TrendingDown className="h-4 w-4 mr-2 text-indigo-500" /> Real-time Convergence
-             </h3>
-             <div className="flex-1 min-h-0">
+           <div className="flex-1 flex flex-col h-full bg-slate-50/50 rounded-xl border border-slate-100 p-4">
+             <div className="flex items-center justify-between mb-3 shrink-0">
+               <h3 className="text-sm font-bold text-slate-800 flex items-center uppercase tracking-wider">
+                  <TrendingDown className="h-4 w-4 mr-2 text-indigo-600" /> Convergence Analysis
+               </h3>
+               {bestFitness && <span className="text-xs font-semibold text-slate-500 font-mono">Current: {bestFitness.toFixed(2)}</span>}
+             </div>
+             <div className="flex-1 min-h-0 relative">
                 <ConvergenceChart data={convergenceData} />
              </div>
            </div>
 
-           <div className="flex-1 flex flex-col h-full pl-6 border-l border-slate-200">
+           <div className="flex-1 flex flex-col h-full bg-slate-50/50 rounded-xl border border-slate-100 p-4 xl:max-w-[45%]">
              <AlgorithmRace />
            </div>
 

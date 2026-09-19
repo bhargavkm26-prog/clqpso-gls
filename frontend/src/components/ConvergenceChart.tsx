@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ChartProps {
   data: { iteration: number; cost: number }[];
@@ -7,7 +7,7 @@ interface ChartProps {
 export default function ConvergenceChart({ data }: ChartProps) {
   if (data.length === 0) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-slate-400 text-sm">
+      <div className="h-full w-full flex items-center justify-center text-slate-400 text-sm font-medium">
         Start optimization to view convergence curve
       </div>
     );
@@ -20,36 +20,43 @@ export default function ConvergenceChart({ data }: ChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+      <AreaChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+        <defs>
+          <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
         <XAxis 
           dataKey="iteration" 
-          tick={{ fontSize: 12, fill: '#64748b' }} 
+          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} 
           tickLine={false}
-          axisLine={{ stroke: '#cbd5e1' }}
+          axisLine={false}
+          dy={10}
         />
         <YAxis 
           domain={[minCost - padding, maxCost + padding]} 
-          tick={{ fontSize: 12, fill: '#64748b' }}
+          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
           tickLine={false}
-          axisLine={{ stroke: '#cbd5e1' }}
+          axisLine={false}
           tickFormatter={(value) => value.toFixed(0)}
         />
         <Tooltip 
-          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-          labelStyle={{ fontWeight: 'bold', color: '#334155' }}
-          itemStyle={{ color: '#4f46e5' }}
+          contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '8px 12px' }}
+          labelStyle={{ fontWeight: 'bold', color: '#64748b', fontSize: '12px', marginBottom: '4px' }}
+          itemStyle={{ color: '#4f46e5', fontWeight: 'bold', fontSize: '14px' }}
         />
-        <Line 
+        <Area 
           type="monotone" 
           dataKey="cost" 
-          stroke="#4f46e5" 
-          strokeWidth={2}
-          dot={false}
-          activeDot={{ r: 6, fill: '#4f46e5', stroke: '#fff', strokeWidth: 2 }}
+          stroke="#6366f1" 
+          strokeWidth={3}
+          fillOpacity={1}
+          fill="url(#colorCost)"
           isAnimationActive={false} // Disable animation for real-time updates
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

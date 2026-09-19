@@ -148,6 +148,63 @@ class OptimizerOrchestrator:
         self.qpso.initialize(initial_population=initial_pop)
         logger.info("Optimizer components initialized.")
 
+    def step(self) -> QPSOState:
+        """Perform one complete orchestrated iteration.
+        
+        Includes the core QPSO step, stagnation checks, GLS penalties,
+        Lévy flight recovery, and periodic local search.
+        """
+        if self.qpso is None:
+            self._init_optimizer_components()
+            
+        # 1. Standard QPSO step
+        state = self.qpso.step()
+        levy_triggered = False
+
+        # 2. Check for Stagnation
+        if self.qpso.stagnation_counter >= self.levy_patience:
+            # 3a. Update GLS penalties on the stagnated solution
+            if self.gls.enabled:
+                self.gls.update_penalties(
+                    self.qpso.gbest_split.routes,
+                    self.cost_matrix_manager.matrix
+                )
+            
+            # 3b. Apply Lévy Flight to worst particles
+            num_jump = int(self.qpso.N * self.levy_jump_fraction)
+            self.qpso.population = self.levy.apply_jump(
+                self.qpso.population,
+                num_particles_to_jump=num_jump,
+                fitness=self.qpso.fitness
+            )
+            
+            # Re-evaluate population after jump
+            self.qpso._evaluate_population()
+            self.qpso._update_bests()
+            
+            # Reset stagnation counter
+            self.qpso.stagnation_counter = 0
+            levy_triggered = True
+            
+            # Update history state flag
+            self.qpso.convergence_history[-1].levy_triggered = True
+
+        # 4. Periodic Local Search on the Global Best
+        if state.iteration % self.local_search_frequency == 0:
+            self._apply_local_search_to_gbest()
+
+        # Logging
+        if state.iteration % 20 == 0:
+            logger.info(
+                f"Iter {state.iteration:>4} | "
+                f"Cost: {self.qpso.gbest_split.total_cost:.1f} | "
+                f"Vehicles: {self.qpso.gbest_split.num_vehicles} | "
+                f"Div: {state.diversity:.3f} | "
+                f"Lévy: {levy_triggered}"
+            )
+            
+        return state
+
     def run(self) -> QPSOResult:
         """Run the full CLQPSO-GLS optimization loop."""
         if self.qpso is None:
@@ -156,51 +213,7 @@ class OptimizerOrchestrator:
         logger.info("Starting optimization loop...")
         
         while not self.qpso.should_stop():
-            # 1. Standard QPSO step
-            state = self.qpso.step()
-            levy_triggered = False
-
-            # 2. Check for Stagnation
-            if self.qpso.stagnation_counter >= self.levy_patience:
-                # 3a. Update GLS penalties on the stagnated solution
-                if self.gls.enabled:
-                    self.gls.update_penalties(
-                        self.qpso.gbest_split.routes,
-                        self.cost_matrix_manager.matrix
-                    )
-                
-                # 3b. Apply Lévy Flight to worst particles
-                num_jump = int(self.qpso.N * self.levy_jump_fraction)
-                self.qpso.population = self.levy.apply_jump(
-                    self.qpso.population,
-                    num_particles_to_jump=num_jump,
-                    fitness=self.qpso.fitness
-                )
-                
-                # Re-evaluate population after jump
-                self.qpso._evaluate_population()
-                self.qpso._update_bests()
-                
-                # Reset stagnation counter
-                self.qpso.stagnation_counter = 0
-                levy_triggered = True
-                
-                # Update history state flag
-                self.qpso.convergence_history[-1].levy_triggered = True
-
-            # 4. Periodic Local Search on the Global Best
-            if state.iteration % self.local_search_frequency == 0:
-                self._apply_local_search_to_gbest()
-
-            # Logging
-            if state.iteration % 20 == 0:
-                logger.info(
-                    f"Iter {state.iteration:>4} | "
-                    f"Cost: {self.qpso.gbest_split.total_cost:.1f} | "
-                    f"Vehicles: {self.qpso.gbest_split.num_vehicles} | "
-                    f"Div: {state.diversity:.3f} | "
-                    f"Lévy: {levy_triggered}"
-                )
+            self.step()
 
         logger.info("Optimization complete.")
         return self.qpso.get_result()
